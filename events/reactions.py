@@ -117,13 +117,23 @@ async def handle_reaction(bot, payload):
                     f"⏳ **Interval: {original_duration//60}m**"
                 )
 
-                new_message = await target_channel.send(shared_text)
+                embed = discord.Embed()
+                if image_url:  # ✅ If an image was originally included, add it
+                    embed.set_image(url=image_url)
+
+                # ✅ Send message with or without an image
+                if image_url:
+                    new_message = await target_channel.send(shared_text, embed=embed)
+                else:
+                    new_message = await target_channel.send(shared_text)
+
                 await new_message.add_reaction("✅")
                 await new_message.add_reaction("🗑️")
                 await new_message.add_reaction("📥")
 
                 bot.messages_to_delete[new_message.id] = (
                     new_message, original_duration, shared_remaining_time, negative_adjustment, 
-                    item_name, rarity_name, color, amount, target_channel.id, creator_name
+                    item_name, rarity_name, color, amount, target_channel.id, creator_name, image_url
                 )
+
                 await message.delete()
