@@ -45,11 +45,25 @@ async def remove_ping_reaction(bot, payload):
         if not event_pings[message_id]:
             del event_pings[message_id]
 
-async def delete_pings_for_event(message_id):
-    """Removes all pings associated with a deleted or reset event."""
+async def delete_pings_for_event(bot, message_id):
+    """Removes all pings associated with a deleted or reset event and deletes reminder messages."""
     if message_id in event_pings:
-        del event_pings[message_id]
+        del event_pings[message_id]  # ✅ Remove from tracking
         logging.info(f"🗑️ All pings removed for event {message_id} (event deleted/reset)")
+
+    # ✅ Now delete actual ping messages
+    for guild in bot.guilds:
+        for channel in guild.text_channels:
+            try:
+                async for msg in channel.history(limit=50):  # ✅ Check last 50 messages
+                    if msg.author == bot.user and f"Reminder!" in msg.content and f"{message_id}" in msg.content:
+                        await msg.delete()
+                        logging.info(f"🗑️ Deleted reminder message for event {message_id} in {channel.name}")
+            except discord.Forbidden:
+                logging.warning(f"⚠️ Missing permissions to delete messages in {channel.name}")
+            except discord.HTTPException as e:
+                logging.error(f"❌ Failed to delete messages: {e}")
+
 
 async def schedule_pings(bot):
     """Background task that checks for events reaching 15 minutes remaining and pings users."""
