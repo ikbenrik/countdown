@@ -1,33 +1,13 @@
-import json
-import os
-import discord
 import time
-from config import GATHERING_CHANNELS, RARITY_COLORS
-from discord.ext import commands
+import discord
+import config
+from utils.helpers import load_items
 
-ITEMS_FILE = "items.json"
-
-def load_items():
-    """Load items from a JSON file."""
-    if os.path.exists(ITEMS_FILE):
-        with open(ITEMS_FILE, "r", encoding="utf-8") as f:
-            try:
-                data = json.load(f)
-                return {key.lower().strip(): value for key, value in data.items()}  
-            except json.JSONDecodeError:
-                print("❌ ERROR: Could not decode JSON file.")
-                return {}
-    else:
-        print(f"❌ ERROR: {ITEMS_FILE} not found.")
-    return {}
-
-# ✅ Load saved items on startup
+# ✅ Load saved items
 item_timers = load_items()
 
 async def cd(bot, ctx, *args):
-    """Handles tracking events with the new command structure."""
-    global item_timers
-
+    """Handles event creation and tracking."""
     if len(args) < 1:
         await ctx.send("❌ **Invalid format!** Use `!cd <item> [rarity/amount] [time]`.")
         return
@@ -36,7 +16,7 @@ async def cd(bot, ctx, *args):
     duration = None
     rarity = "r"
     amount = ""
-
+    
     duration_mapping = {"h": 3600, "m": 60, "s": 1}
     for arg in args[1:]:
         if arg[-1].lower() in duration_mapping and arg[:-1].isdigit():
@@ -49,7 +29,7 @@ async def cd(bot, ctx, *args):
             rarity = rarity_letter[0] if rarity_letter else "r"
             continue
 
-    rarity_name, color = RARITY_COLORS.get(rarity, ("Rare", "🔵"))
+    rarity_name, color = config.RARITY_COLORS.get(rarity, ("Rare", "🔵"))
 
     if duration is None:
         if item_name in item_timers:
@@ -58,23 +38,22 @@ async def cd(bot, ctx, *args):
             await ctx.send(f"❌ **{item_name.capitalize()}** is not stored! Use `!cd {item_name} <time>` first.")
             return
 
-    countdown_time = int(time.time()) + duration  
-
+    countdown_time = int(time.time()) + duration
     countdown_text = (
         f"{color} **{amount}x {rarity_name} {item_name.capitalize()}** {color}\n"
         f"👤 **Posted by: {ctx.author.display_name}**\n"
         f"⏳ **Next spawn at** <t:{countdown_time}:F>\n"
-        f"⏳ **Countdown:** <t:{countdown_time}:R>"
+        f"⏳ **Countdown:** <t:{countdown_time}:R>\n"
+        f"⏳ **Interval: {duration//60}m**"
     )
 
-    countdown_message = await ctx.send(countdown_text)
+    message = await ctx.send(countdown_text)
 
-    await countdown_message.add_reaction("✅")
-    await countdown_message.add_reaction("🗑️")
+    await message.add_reaction("✅")
+    await message.add_reaction("🗑️")
+    for emoji in config.GATHERING_CHANNELS.keys():
+        await message.add_reaction(emoji)
 
-    for emoji in GATHERING_CHANNELS.keys():
-        await countdown_message.add_reaction(emoji)
-
-    bot.messages_to_delete[countdown_message.id] = (
-        countdown_message, duration, item_name.capitalize(), rarity_name, color, amount, ctx.channel.id, ctx.author.display_name
+    bot.messages_to_delete[message.id] = (
+        message, duration, item_name.capitalize(), rarity_name, color, amount, ctx.channel.id, ctx.author.display_name
     )
