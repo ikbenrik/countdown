@@ -46,6 +46,12 @@ async def remove_ping_reaction(bot, payload):
         if not event_pings[message_id]:
             del event_pings[message_id]
 
+async def delete_pings_for_event(message_id):
+    """Removes all pings associated with a deleted or reset event."""
+    if message_id in event_pings:
+        del event_pings[message_id]
+        logging.info(f"🗑️ All pings removed for event {message_id} (event deleted/reset)")
+
 async def schedule_pings(bot):
     """Background task that checks for events reaching 15 minutes remaining and pings users."""
     while True:
