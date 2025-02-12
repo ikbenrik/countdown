@@ -75,6 +75,7 @@ async def cd(bot, ctx, *args):
     # ✅ Always add reset and delete reactions
     await message.add_reaction("✅")  # Reset event
     await message.add_reaction("🗑️")  # Delete event
+    await message.add_reaction("🔔")  # ✅ ADD PING REACTION
 
     # ✅ Check if the event is in a shared gathering channel
     if ctx.channel.name in config.GATHERING_CHANNELS.values():
