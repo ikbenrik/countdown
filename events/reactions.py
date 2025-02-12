@@ -101,7 +101,12 @@ async def handle_reaction(bot, payload):
 
                 # ✅ Fix: Ensure negative adjustment is applied correctly
                 # ✅ Correctly apply negative time when sharing
-                shared_remaining_time = max(0, remaining_duration)  # Ensure it's non-negative
+                if negative_adjustment > 0:
+                # ✅ If a negative adjustment was originally applied, retain it.
+                shared_remaining_time = max(0, remaining_duration + negative_adjustment)
+                else:
+                # ✅ If no negative time was set, just use the actual remaining time.
+                shared_remaining_time = max(0, remaining_duration)
                 new_end_time = current_time + shared_remaining_time  # Keep remaining time intact
 
                 print(f"🟢 DEBUG - Final Sharing Time:")
