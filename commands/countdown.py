@@ -62,7 +62,7 @@ async def cd(bot, ctx, *args):
 
     countdown_text = (
         f"{color} **{amount}x {rarity_name} {item_name.capitalize()}** {color}\n"
-        f"👤 **Posted by: {ctx.author.display_name}**\n"
+        f"👤 **Posted by: {ctx.message.author.display_name}**\n"
         f"⏳ **Next spawn at** <t:{countdown_time}:F>\n"
         f"⏳ **Countdown:** <t:{countdown_time}:R>"
     )
