@@ -31,6 +31,7 @@ async def handle_reaction(bot, payload):
         message_data = bot.messages_to_delete[message.id]
         message, stored_duration, item_name, rarity_name, color, amount, channel_id, creator_name = message_data
 
+        # ✅ Current time & event calculations
         current_time = int(time.time())
         event_creation_time = int(message.created_at.timestamp())
         remaining_time = max(0, stored_duration - (current_time - event_creation_time))
@@ -38,14 +39,14 @@ async def handle_reaction(bot, payload):
         # ✅ Debugging prints to verify time calculations
         print(f"DEBUG: Current Time: {current_time}")
         print(f"DEBUG: Event Created At: {event_creation_time}")
-        print(f"DEBUG: Remaining Time: {remaining_time}")
-        print(f"DEBUG: Stored Duration: {stored_duration}")
+        print(f"DEBUG: Remaining Time: {remaining_time} seconds ({remaining_time//60}m)")
+        print(f"DEBUG: Stored Duration: {stored_duration} seconds ({stored_duration//60}m)")
 
-        # ✅ Reset Event
+        # ✅ Reset Event (Always resets to stored duration)
         if reaction_emoji == "✅":
-            print(f"🔄 Resetting event: {item_name}")
+            print(f"🔄 Resetting event: {item_name} to original duration.")
 
-            new_end_time = current_time + stored_duration  # Reset to full interval
+            new_end_time = current_time + stored_duration  # ✅ Always reset to original duration
             reset_text = (
                 f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
                 f"👤 **Reset by: {user.display_name}**\n"
@@ -65,7 +66,7 @@ async def handle_reaction(bot, payload):
                 for emoji in config.GATHERING_CHANNELS.keys():
                     await new_message.add_reaction(emoji)  # Share reactions
 
-            # ✅ Correctly store reset event with full interval
+            # ✅ Store reset event with full interval
             bot.messages_to_delete[new_message.id] = (
                 new_message, stored_duration, item_name, rarity_name, color, amount, channel_id, creator_name
             )
@@ -86,15 +87,16 @@ async def handle_reaction(bot, payload):
             if target_channel:
                 print(f"📤 Sharing event: {item_name} to {new_channel_name}")
 
-                # ✅ Calculate remaining time correctly
-                new_end_time = current_time + remaining_time  # ✅ Keeps remaining time instead of resetting
+                # ✅ Fix: Always use remaining time when sharing
+                new_end_time = current_time + remaining_time  
+                print(f"DEBUG: Shared event keeping remaining time: {remaining_time//60}m")
 
                 shared_text = (
                     f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
                     f"👤 **Shared by: {user.display_name}**\n"
                     f"⏳ **Next spawn at** <t:{new_end_time}:F>\n"
                     f"⏳ **Countdown:** <t:{new_end_time}:R>\n"
-                    f"⏳ **Interval: {stored_duration//60}m**"  # Still show full interval
+                    f"⏳ **Interval: {stored_duration//60}m**"  # Keep original interval for display
                 )
 
                 new_message = await target_channel.send(shared_text)
@@ -102,7 +104,7 @@ async def handle_reaction(bot, payload):
                 await new_message.add_reaction("🗑️")  # Delete
                 await new_message.add_reaction("📥")  # Claim reaction for shared channels
 
-                # ✅ Store shared event with **remaining_time**
+                # ✅ Correctly store shared event with remaining time
                 bot.messages_to_delete[new_message.id] = (
                     new_message, remaining_time, item_name, rarity_name, color, amount, target_channel.id, creator_name
                 )
