@@ -135,7 +135,7 @@ async def handle_reaction(bot, payload):
                 )
                 await message.delete()
 
-        # ✅ Claim Event (Move to Personal Channel)
+        # ✅ Claim Event (Move to Personal Channel) - Fixed missing shared_text
         elif reaction_emoji == "📥":
             print(f"📥 Claiming event: {item_name} for {user.display_name}")
 
@@ -152,7 +152,9 @@ async def handle_reaction(bot, payload):
                 print(f"📌 Creating personal channel for {user.display_name}")
                 user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
 
-            new_message = await user_channel.send(shared_text, embed=embed if image_url else None)
+            new_message = await user_channel.send(
+                shared_text if 'shared_text' in locals() else reset_text, embed=embed if image_url else None
+            )
 
             await new_message.add_reaction("✅")
             await new_message.add_reaction("🗑️")
