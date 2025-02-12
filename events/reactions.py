@@ -135,7 +135,7 @@ async def handle_reaction(bot, payload):
                 )
                 await message.delete()
 
-        # ✅ Claim Event (Move to Personal Channel) - FIXED `UnboundLocalError`
+        # ✅ Claim Event (Move to Personal Channel) - FIXED `Unknown event data`
         elif reaction_emoji == "📥":
             print(f"📥 Claiming event: {item_name} for {user.display_name}")
 
@@ -152,8 +152,8 @@ async def handle_reaction(bot, payload):
                 print(f"📌 Creating personal channel for {user.display_name}")
                 user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
 
-            # ✅ Ensure a valid message text exists before sending
-            event_text = locals().get("shared_text", locals().get("reset_text", "Unknown event data."))
+            # ✅ Ensure the correct text is used when claiming the event
+            event_text = shared_text if reaction_emoji == "📥" else reset_text
 
             new_message = await user_channel.send(event_text, embed=embed if image_url else None)
 
