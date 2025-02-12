@@ -127,7 +127,14 @@ async def handle_reaction(bot, payload):
             print(f"📥 Claiming event: {item_name} for {user.display_name}")
 
             user_channel_name = user.display_name.lower().replace(" ", "-")
-            personal_category = discord.utils.get(guild.categories, name="PERSONAL INTEL")
+            # 🔍 Find "PERSONAL INTEL" category case-insensitively
+            personal_category = next((cat for cat in guild.categories if cat.name.lower() == "personal intel"), None)
+
+            if not personal_category:
+                print(f"❌ ERROR: 'PERSONAL INTEL' category not found! Listing available categories:")
+                for category in guild.categories:
+                    print(f"   📌 Found Category: {category.name}")
+                return
 
             if not personal_category:
                 print("❌ ERROR: 'PERSONAL INTEL' category not found! Cannot create personal channels.")
