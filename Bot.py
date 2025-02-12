@@ -1,18 +1,18 @@
-import discord  # ✅ Missing import
+import discord
 from discord.ext import commands
 import config
 from commands.countdown import cd
-from events.reactions import handle_reaction
+from events.reactions import handle_reaction  # ✅ Import reaction handling
 
-# ✅ Set up intents correctly
+# ✅ Setup intents properly
 intents = discord.Intents.default()
 intents.message_content = True
 intents.reactions = True  
 intents.messages = True  
 intents.guilds = True  
-intents.members = True  # Ensure this is included
+intents.members = True  
 
-# ✅ Pass intents when initializing bot
+# ✅ Initialize the bot
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
@@ -26,11 +26,13 @@ async def on_ready():
 
 @bot.event
 async def on_raw_reaction_add(payload):
-    """Handles reactions for sharing, claiming, resetting, and deleting timers."""
-    await handle_reaction(bot, payload)  # ✅ Ensure this event calls the reaction handler
+    """Handles reactions globally."""
+    await handle_reaction(bot, payload)  # ✅ Pass bot object to `reactions.py`
 
 @bot.command(name="cd")
 async def command_cd(ctx, *args):
+    """Handles countdown command execution."""
     await cd(ctx, *args)
 
+# ✅ Run the bot
 bot.run(config.TOKEN)
