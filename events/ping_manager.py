@@ -52,7 +52,7 @@ async def schedule_pings(bot):
         current_time = int(time.time())
         to_remove = []
 
-        for message_id, users in event_pings.items():
+        for message_id, users in list(event_pings.items()):  # ✅ Use list() to prevent runtime issues
             if message_id in bot.messages_to_delete:
                 event_data = bot.messages_to_delete[message_id]
                 message, original_duration, remaining_time, negative_adjustment, item_name, rarity, color, amount, channel_id, creator_name, image_url = event_data
@@ -60,20 +60,28 @@ async def schedule_pings(bot):
                 event_end_time = current_time + remaining_time  # When the event will expire
                 time_left = event_end_time - current_time  # Time left in seconds
 
-                if 900 <= time_left < 910:  # ✅ Ping 15 minutes before (900 seconds)
+                # ✅ Debugging logs
+                logging.debug(f"🔎 Checking pings: {message_id} | Time Left: {time_left}s")
+
+                if 900 <= time_left < 960:  # ✅ Ping when 15 minutes left
                     logging.info(f"🔔 Sending ping for event {message_id}")
 
                     channel = bot.get_channel(channel_id)
                     if channel:
                         mentions = " ".join([f"<@{user_id}>" for user_id in users])
                         event_link = f"[Click here]({message.jump_url})"  # ✅ Include event link in the ping
-                        await channel.send(f"🔔 **Reminder!** {item_name} event ends in **15 minutes!** {mentions} {event_link}")
+
+                        try:
+                            await channel.send(f"🔔 **Reminder!** {item_name} event ends in **15 minutes!** {mentions} {event_link}")
+                        except discord.Forbidden:
+                            logging.error(f"🚫 Bot lacks permission to send messages in {channel.name}!")
+                        except discord.HTTPException as e:
+                            logging.error(f"❌ Failed to send ping: {e}")
 
                     to_remove.append(message_id)  # ✅ Remove event after ping is sent
 
-        # ✅ Remove events that have been processed
+        # ✅ Remove processed events
         for msg_id in to_remove:
-            if msg_id in event_pings:
-                del event_pings[msg_id]
+            event_pings.pop(msg_id, None)
 
         await asyncio.sleep(30)  # ✅ Check every 30 seconds
