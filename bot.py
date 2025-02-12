@@ -3,6 +3,7 @@ from discord.ext import commands
 import config
 from commands.countdown import cd
 from events.reactions import handle_reaction
+from commands.items import add_item, remove_item  # ✅ Importing new functions
 import logging
 
 # ✅ Reset logging completely
@@ -16,7 +17,6 @@ logging.basicConfig(
 )
 
 logging.info("🚀 Bot is starting...")
-
 
 # ✅ Setup bot intents
 intents = discord.Intents.default()
@@ -50,7 +50,18 @@ async def command_cd(ctx, *args):
     except discord.NotFound:
         print("⚠️ Warning: Command message was already deleted.")
 
+# ✅ New Commands for Adding and Removing Items
+@bot.command(name="add")
+async def command_add(ctx, item_name: str, duration: str):
+    """Handles adding new items."""
+    logging.debug(f"📌 User {ctx.author} requested to add item: {item_name} with duration {duration}")
+    await add_item(ctx, item_name, duration)
 
+@bot.command(name="del")
+async def command_del(ctx, item_name: str):
+    """Handles removing items."""
+    logging.debug(f"🗑️ User {ctx.author} requested to delete item: {item_name}")
+    await remove_item(ctx, item_name)
 
 # ✅ Start bot
 bot.run(config.TOKEN)
