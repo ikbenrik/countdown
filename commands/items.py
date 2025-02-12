@@ -68,7 +68,7 @@ async def add_item(ctx, item_name: str, duration_str: str):
         print("⚠️ Warning: Command message was already deleted.")
 
 async def remove_item(ctx, item_name: str):
-    """Removes an item from the list."""
+    """Removes an item from the list and deletes the command message."""
     item_name = item_name.lower()
 
     if item_name in item_timers:
@@ -82,6 +82,13 @@ async def remove_item(ctx, item_name: str):
         logging.warning(f"⚠️ Attempted to remove non-existent item: {item_name}")
         response = await ctx.send(f"⚠️ **Item not found:** {item_name.capitalize()}")
         await response.add_reaction("🗑️")  # 🗑️ Reaction for deletion
+
+    # ✅ Attempt to delete the user's command message
+    try:
+        await ctx.message.delete()
+    except discord.NotFound:
+        print("⚠️ Warning: Command message was already deleted.")
+
 
 async def list_items(ctx):
     """Displays all stored items and their durations."""
