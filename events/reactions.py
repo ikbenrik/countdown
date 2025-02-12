@@ -31,117 +31,124 @@ async def handle_reaction(bot, payload):
 
     # ✅ Handle Bell reaction (Ping system)
     if reaction_emoji == "🔔":
-        if payload.event_type == "REACTION_ADD":
-            await track_ping_reaction(bot, payload)
-        elif payload.event_type == "REACTION_REMOVE":
+        if hasattr(payload, 'event_type') and payload.event_type == "REACTION_REMOVE":
             await remove_ping_reaction(bot, payload)
-    return  # ✅ Stop further processing, don't send a new event message
+        else:
+            await track_ping_reaction(bot, payload)
+        return  # ✅ Stop further processing, as this does not modify the event message
 
     # ✅ Auto-delete bot messages when clicking 🗑️
     if reaction_emoji == "🗑️" and message.author == bot.user:
         print(f"🗑️ Deleting bot message: {message.id} in #{channel.name}")
         await message.delete()
+        
+        # ✅ Ensure the event is fully removed from tracking
+        if message.id in bot.messages_to_delete:
+            del bot.messages_to_delete[message.id]  # ✅ Fully remove from tracking
         return
 
     # ✅ Check if the message exists in bot tracking
-    if message.id in bot.messages_to_delete:
-        message_data = bot.messages_to_delete[message.id]
-        print(f"✅ Found message {message.id} in tracked events.")
+    if message.id not in bot.messages_to_delete:
+        print(f"❌ ERROR: Event {message.id} not found in tracking.")
+        return
 
-        message, original_duration, remaining_duration, negative_adjustment, item_name, rarity_name, color, amount, channel_id, creator_name, image_url = message_data
+    message_data = bot.messages_to_delete[message.id]
+    print(f"✅ Found message {message.id} in tracked events.")
 
-        current_time = int(time.time())
-        event_creation_time = int(message.created_at.timestamp())
-        adjusted_remaining_time = max(0, remaining_duration - (current_time - event_creation_time))
+    message, original_duration, remaining_duration, negative_adjustment, item_name, rarity_name, color, amount, channel_id, creator_name, image_url = message_data
 
-        print(f"🛠 DEBUGGING TIME VALUES:")
-        print(f"   ⏳ Remaining Time: {adjusted_remaining_time} sec ({adjusted_remaining_time//60}m)")
+    current_time = int(time.time())
+    event_creation_time = int(message.created_at.timestamp())
+    adjusted_remaining_time = max(0, remaining_duration - (current_time - event_creation_time))
 
-        # ✅ Universal Event Format
-        def generate_event_text(actor: str, action: str) -> str:
-            """Creates a standardized event message format."""
-            return (
-                f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
-                f"👤 **{action} by: {actor}**\n"
-                f"⏳ **Next spawn at** <t:{current_time + adjusted_remaining_time}:F>\n"
-                f"⏳ **Countdown:** <t:{current_time + adjusted_remaining_time}:R>\n"
-                f"⏳ **Interval: {original_duration//60}m**"
-            )
+    print(f"🛠 DEBUGGING TIME VALUES:")
+    print(f"   ⏳ Remaining Time: {adjusted_remaining_time} sec ({adjusted_remaining_time//60}m)")
 
-        new_message = None  # ✅ Ensures no undefined variable issues
-
-        # ✅ Reset Event (Restores original interval)
-        if reaction_emoji == "✅":
-            print(f"🔄 Resetting event: {item_name}")
-            event_text = generate_event_text(user.display_name, "Reset")
-            channel = channel  # ✅ Stay in the same channel
-
-        # ✅ Share Event (Replaces sharing options with claim)
-        elif reaction_emoji in config.GATHERING_CHANNELS:
-            new_channel_name = config.GATHERING_CHANNELS[reaction_emoji]
-            target_channel = discord.utils.get(guild.channels, name=new_channel_name)
-
-            if target_channel:
-                print(f"📤 Sharing event: {item_name} to {new_channel_name}")
-                event_text = generate_event_text(user.display_name, "Shared")
-                channel = target_channel  # ✅ Move event to shared channel
-
-        # ✅ Claim Event (Moves to Personal Channel & Enables Sharing)
-        elif reaction_emoji == "📥":
-            print(f"📥 Claiming event: {item_name} for {user.display_name}")
-
-            user_channel_name = user.display_name.lower().replace(" ", "-")
-            personal_category = next((cat for cat in guild.categories if cat.name.lower() == "personal intel"), None)
-
-            if not personal_category:
-                return
-
-            user_channel = discord.utils.get(guild.text_channels, name=user_channel_name, category=personal_category)
-
-            if not user_channel:
-                user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
-
-            event_text = generate_event_text(user.display_name, "Claimed")
-            channel = user_channel  # ✅ Move to personal channel
-
-        embed = discord.Embed()
-        if image_url:
-            embed.set_image(url=image_url)
-
-        new_message = await channel.send(event_text, embed=embed if image_url else None)
-
-        # ✅ Always add Reset, Delete, and Bell Reactions
-        await new_message.add_reaction("✅")
-        await new_message.add_reaction("🗑️")
-        await new_message.add_reaction("🔔")
-
-        # ✅ If event is shared, REMOVE sharing reactions (⛏️, 🌲, 🌿, etc.), only allow claim
-        if reaction_emoji in config.GATHERING_CHANNELS:
-            await new_message.add_reaction("📥")  # ✅ Only claim after sharing
-            print(f"📌 Event moved to a shared channel, replaced share options with claim (`📥`).")
-
-        # ✅ If event is claimed, REMOVE claim (`📥`) and ADD sharing options
-        elif reaction_emoji == "📥":
-            for emoji in config.GATHERING_CHANNELS.keys():
-                await new_message.add_reaction(emoji)  # ✅ Allow sharing after claiming
-
-        # ✅ If event is reset (`✅` reaction), set reactions based on channel type
-        elif reaction_emoji == "✅":
-            # ✅ If reset in a shared channel, give `📥` and `🔔`
-            if channel.name in config.GATHERING_CHANNELS.values():
-                await new_message.add_reaction("📥")
-                print(f"📌 Event reset in shared channel, added `📥` and `🔔`.")
-
-            # ✅ If reset in a personal channel, give sharing reactions
-            else:
-                for emoji in config.GATHERING_CHANNELS.keys():
-                    await new_message.add_reaction(emoji)
-                print(f"📌 Event reset in personal channel, added sharing reactions and `🔔`.")
-
-        # ✅ Store New Event Data
-        bot.messages_to_delete[new_message.id] = (
-            new_message, original_duration, adjusted_remaining_time, negative_adjustment,
-            item_name, rarity_name, color, amount, new_message.channel.id, creator_name, image_url
+    # ✅ Universal Event Format
+    def generate_event_text(actor: str, action: str) -> str:
+        """Creates a standardized event message format."""
+        return (
+            f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
+            f"👤 **{action} by: {actor}**\n"
+            f"⏳ **Next spawn at** <t:{current_time + adjusted_remaining_time}:F>\n"
+            f"⏳ **Countdown:** <t:{current_time + adjusted_remaining_time}:R>\n"
+            f"⏳ **Interval: {original_duration//60}m**"
         )
 
-        await message.delete()  # ✅ Remove old message
+    new_message = None  # ✅ Ensures no undefined variable issues
+
+    # ✅ Reset Event (Restores original interval)
+    if reaction_emoji == "✅":
+        print(f"🔄 Resetting event: {item_name}")
+        event_text = generate_event_text(user.display_name, "Reset")
+        channel = channel  # ✅ Stay in the same channel
+
+    # ✅ Share Event (Replaces sharing options with claim)
+    elif reaction_emoji in config.GATHERING_CHANNELS:
+        new_channel_name = config.GATHERING_CHANNELS[reaction_emoji]
+        target_channel = discord.utils.get(guild.channels, name=new_channel_name)
+
+        if target_channel:
+            print(f"📤 Sharing event: {item_name} to {new_channel_name}")
+            event_text = generate_event_text(user.display_name, "Shared")
+            channel = target_channel  # ✅ Move event to shared channel
+
+    # ✅ Claim Event (Moves to Personal Channel & Enables Sharing)
+    elif reaction_emoji == "📥":
+        print(f"📥 Claiming event: {item_name} for {user.display_name}")
+
+        user_channel_name = user.display_name.lower().replace(" ", "-")
+        personal_category = next((cat for cat in guild.categories if cat.name.lower() == "personal intel"), None)
+
+        if not personal_category:
+            return
+
+        user_channel = discord.utils.get(guild.text_channels, name=user_channel_name, category=personal_category)
+
+        if not user_channel:
+            user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
+
+        event_text = generate_event_text(user.display_name, "Claimed")
+        channel = user_channel  # ✅ Move to personal channel
+
+    embed = discord.Embed()
+    if image_url:
+        embed.set_image(url=image_url)
+
+    new_message = await channel.send(event_text, embed=embed if image_url else None)
+
+    # ✅ Always add Reset, Delete, and Bell Reactions
+    await new_message.add_reaction("✅")
+    await new_message.add_reaction("🗑️")
+    await new_message.add_reaction("🔔")
+
+    # ✅ If event is shared, REMOVE sharing reactions (⛏️, 🌲, 🌿, etc.), only allow claim
+    if reaction_emoji in config.GATHERING_CHANNELS:
+        await new_message.add_reaction("📥")  # ✅ Only claim after sharing
+        print(f"📌 Event moved to a shared channel, replaced share options with claim (`📥`).")
+
+    # ✅ If event is claimed, REMOVE claim (`📥`) and ADD sharing options
+    elif reaction_emoji == "📥":
+        for emoji in config.GATHERING_CHANNELS.keys():
+            await new_message.add_reaction(emoji)  # ✅ Allow sharing after claiming
+
+    # ✅ If event is reset (`✅` reaction), set reactions based on channel type
+    elif reaction_emoji == "✅":
+        # ✅ If reset in a shared channel, give `📥` and `🔔`
+        if channel.name in config.GATHERING_CHANNELS.values():
+            await new_message.add_reaction("📥")
+            print(f"📌 Event reset in shared channel, added `📥` and `🔔`.")
+
+        # ✅ If reset in a personal channel, give sharing reactions
+        else:
+            for emoji in config.GATHERING_CHANNELS.keys():
+                await new_message.add_reaction(emoji)
+            print(f"📌 Event reset in personal channel, added sharing reactions and `🔔`.")
+
+    # ✅ Store New Event Data
+    bot.messages_to_delete[new_message.id] = (
+        new_message, original_duration, adjusted_remaining_time, negative_adjustment,
+        item_name, rarity_name, color, amount, new_message.channel.id, creator_name, image_url
+    )
+
+    await message.delete()  # ✅ Remove old message
