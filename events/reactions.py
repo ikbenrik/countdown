@@ -33,6 +33,10 @@ async def handle_reaction(bot, payload):
     if reaction_emoji == "🔔":
         await track_ping_reaction(bot, payload)  # ✅ Store event link for pings
 
+    # ✅ Remove user from pings if they remove 🔔 reaction
+    if payload.event_type == "REACTION_REMOVE" and reaction_emoji == "🔔":
+        await remove_ping_reaction(bot, payload)
+
     # ✅ Auto-delete bot messages when clicking 🗑️
     if reaction_emoji == "🗑️" and message.author == bot.user:
         print(f"🗑️ Deleting bot message: {message.id} in #{channel.name}")
@@ -44,7 +48,13 @@ async def handle_reaction(bot, payload):
         message_data = bot.messages_to_delete[message.id]
         print(f"✅ Found message {message.id} in tracked events.")
 
-        message, original_duration, remaining_duration, negative_adjustment, item_name, rarity_name, color, amount, channel_id, creator_name, image_url = message_data
+        if len(message_data) == 8:  # Old format detected
+            print("⚠️ WARNING: Old format detected. Fixing now.")
+            message, original_duration, remaining_duration, item_name, rarity_name, color, amount, channel_id, creator_name = message_data
+            negative_adjustment = 0  # Assume no negative time for old events
+            image_url = None  # Older events don't store images
+        else:
+            message, original_duration, remaining_duration, negative_adjustment, item_name, rarity_name, color, amount, channel_id, creator_name, image_url = message_data
 
         current_time = int(time.time())
         event_creation_time = int(message.created_at.timestamp())
@@ -58,8 +68,75 @@ async def handle_reaction(bot, payload):
         print(f"   ⏳ Original Duration: {original_duration} sec ({original_duration//60}m)")
         print(f"   🛑 Negative Adjustment: {negative_adjustment} sec ({negative_adjustment//60}m)")
 
-        # ✅ Claim Event (📥) - Fix event not showing correctly
-        if reaction_emoji == "📥":
+        # ✅ Reset Event (Restores original interval)
+        if reaction_emoji == "✅":
+            print(f"🔄 Resetting event: {item_name}")
+            new_end_time = current_time + original_duration
+
+            reset_text = (
+                f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
+                f"👤 **Reset by: {user.display_name}**\n"
+                f"⏳ **Next spawn at** <t:{new_end_time}:F>\n"
+                f"⏳ **Countdown:** <t:{new_end_time}:R>\n"
+                f"⏳ **Interval: {original_duration//60}m**"
+            )
+
+            embed = discord.Embed()
+            if image_url:
+                embed.set_image(url=image_url)
+
+            new_message = await channel.send(reset_text, embed=embed if image_url else None)
+
+            await new_message.add_reaction("✅")
+            await new_message.add_reaction("🗑️")
+            await new_message.add_reaction("🔔")  # ✅ Bell reaction for pings
+
+            for emoji in config.GATHERING_CHANNELS.keys():
+                await new_message.add_reaction(emoji)
+
+            bot.messages_to_delete[new_message.id] = (
+                new_message, original_duration, original_duration, 0, item_name, rarity_name, color, amount, channel_id, creator_name, image_url
+            )
+            await message.delete()
+
+        # ✅ Share Event (Maintains Timer & Ensures Bell Reaction)
+        elif reaction_emoji in config.GATHERING_CHANNELS:
+            new_channel_name = config.GATHERING_CHANNELS[reaction_emoji]
+            target_channel = discord.utils.get(guild.channels, name=new_channel_name)
+
+            if target_channel:
+                print(f"📤 Sharing event: {item_name} to {new_channel_name}")
+
+                shared_remaining_time = min(adjusted_remaining_time, original_duration)
+                new_end_time = current_time + shared_remaining_time
+
+                shared_text = (
+                    f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
+                    f"👤 **Shared by: {user.display_name}**\n"
+                    f"⏳ **Next spawn at** <t:{new_end_time}:F>\n"
+                    f"⏳ **Countdown:** <t:{new_end_time}:R>\n"
+                    f"⏳ **Interval: {original_duration//60}m**"
+                )
+
+                embed = discord.Embed()
+                if image_url:
+                    embed.set_image(url=image_url)
+
+                new_message = await target_channel.send(shared_text, embed=embed if image_url else None)
+
+                await new_message.add_reaction("✅")
+                await new_message.add_reaction("🗑️")
+                await new_message.add_reaction("📥")
+                await new_message.add_reaction("🔔")  # ✅ Bell reaction for pings
+
+                bot.messages_to_delete[new_message.id] = (
+                    new_message, original_duration, shared_remaining_time, negative_adjustment, 
+                    item_name, rarity_name, color, amount, target_channel.id, creator_name, image_url
+                )
+                await message.delete()
+
+        # ✅ Claim Event (Move to Personal Channel) - Fixed claim error
+        elif reaction_emoji == "📥":
             print(f"📥 Claiming event: {item_name} for {user.display_name}")
 
             user_channel_name = user.display_name.lower().replace(" ", "-")
@@ -75,27 +152,16 @@ async def handle_reaction(bot, payload):
                 print(f"📌 Creating personal channel for {user.display_name}")
                 user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
 
-            # ✅ Ensure full event details are visible when claiming
-            claimed_text = (
-                f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
-                f"👤 **Claimed by: {user.display_name}**\n"
-                f"⏳ **Next spawn at** <t:{current_time + adjusted_remaining_time}:F>\n"
-                f"⏳ **Countdown:** <t:{current_time + adjusted_remaining_time}:R>\n"
-                f"⏳ **Interval: {original_duration//60}m**"
-            )
-
-            embed = discord.Embed()
-            if image_url:
-                embed.set_image(url=image_url)
+            shared_text = "🔔 **Event claimed!** Details unavailable."
 
             new_message = await user_channel.send(
-                claimed_text, embed=embed if image_url else None
+                reset_text if 'reset_text' in locals() else shared_text, 
+                embed=embed if image_url else None
             )
 
             await new_message.add_reaction("✅")
             await new_message.add_reaction("🗑️")
             await new_message.add_reaction("🔔")  # ✅ Bell reaction for pings
-
             for emoji in config.GATHERING_CHANNELS.keys():
                 await new_message.add_reaction(emoji)
 
