@@ -59,6 +59,7 @@ async def handle_reaction(bot, payload):
         current_time = int(time.time())
         event_creation_time = int(message.created_at.timestamp())
         adjusted_remaining_time = max(0, remaining_duration - (current_time - event_creation_time))
+        new_message = None  # ✅ Ensure new_message is always defined
 
         ### 🛠 **Debugging Logs**
         print(f"🛠 DEBUGGING TIME VALUES:")
@@ -83,13 +84,7 @@ async def handle_reaction(bot, payload):
         if reaction_emoji == "✅":
             print(f"🔄 Resetting event: {item_name}")
             new_end_time = current_time + original_duration
-
             event_text = generate_event_text(user.display_name, "Reset")
-            embed = discord.Embed()
-            if image_url:
-                embed.set_image(url=image_url)
-
-            new_message = await channel.send(event_text, embed=embed if image_url else None)
 
         # ✅ Share Event (Ensures Bell Reaction)
         elif reaction_emoji in config.GATHERING_CHANNELS:
@@ -98,16 +93,10 @@ async def handle_reaction(bot, payload):
 
             if target_channel:
                 print(f"📤 Sharing event: {item_name} to {new_channel_name}")
-
                 shared_remaining_time = min(adjusted_remaining_time, original_duration)
                 new_end_time = current_time + shared_remaining_time
-
                 event_text = generate_event_text(user.display_name, "Shared")
-                embed = discord.Embed()
-                if image_url:
-                    embed.set_image(url=image_url)
-
-                new_message = await target_channel.send(event_text, embed=embed if image_url else None)
+                channel = target_channel  # ✅ Set channel to new location
 
         # ✅ Claim Event (Moves to Personal Channel)
         elif reaction_emoji == "📥":
@@ -126,24 +115,32 @@ async def handle_reaction(bot, payload):
                 print(f"📌 Creating personal channel for {user.display_name}")
                 user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
 
+            new_end_time = current_time + adjusted_remaining_time
             event_text = generate_event_text(user.display_name, "Claimed")
-            embed = discord.Embed()
-            if image_url:
-                embed.set_image(url=image_url)
+            channel = user_channel  # ✅ Set channel to personal location
 
-            new_message = await user_channel.send(event_text, embed=embed if image_url else None)
+        else:
+            return  # ✅ If the reaction is not handled, stop execution
 
-        # ✅ Add Standard Reactions to All New Messages
-        if new_message:
-            await new_message.add_reaction("✅")
-            await new_message.add_reaction("🗑️")
-            await new_message.add_reaction("🔔")  # ✅ Bell reaction for pings
-            for emoji in config.GATHERING_CHANNELS.keys():
-                await new_message.add_reaction(emoji)
+        # ✅ Send New Event Message
+        embed = discord.Embed()
+        if image_url:
+            embed.set_image(url=image_url)
 
-            bot.messages_to_delete[new_message.id] = (
-                new_message, original_duration, adjusted_remaining_time, negative_adjustment,
-                item_name, rarity_name, color, amount, new_message.channel.id, creator_name, image_url
-            )
+        new_message = await channel.send(event_text, embed=embed if image_url else None)
 
-            await message.delete()
+        # ✅ Add Reactions
+        await new_message.add_reaction("✅")
+        await new_message.add_reaction("🗑️")
+        await new_message.add_reaction("📥")  # ✅ Ensure claimable events
+        await new_message.add_reaction("🔔")  # ✅ Bell reaction for pings
+        for emoji in config.GATHERING_CHANNELS.keys():
+            await new_message.add_reaction(emoji)
+
+        # ✅ Store New Event Data
+        bot.messages_to_delete[new_message.id] = (
+            new_message, original_duration, adjusted_remaining_time, negative_adjustment,
+            item_name, rarity_name, color, amount, new_message.channel.id, creator_name, image_url
+        )
+
+        await message.delete()  # ✅ Remove old message
