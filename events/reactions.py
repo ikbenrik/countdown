@@ -101,6 +101,7 @@ async def handle_reaction(bot, payload):
             new_message, remaining_time, item_name, rarity_name, color, amount, target_channel.id, creator_name
         )
 
+
         # ✅ Delete the original message after sharing
         await message.delete()
 
