@@ -59,5 +59,22 @@ async def remove_item(ctx, item_name: str):
         logging.warning(f"⚠️ Attempted to remove non-existent item: {item_name}")
         await ctx.send(f"⚠️ **{item_name.capitalize()}** does not exist!")
 
+# Ensure item_timers is loaded
+from utils.helpers import load_items
+item_timers = load_items()
+
+async def list_items(ctx):
+    """Displays all stored items and their durations."""
+    logging.debug(f"📜 User {ctx.author} requested the item list.")
+
+    if not item_timers:
+        await ctx.send("📭 **No items stored!** Use `!add <item> <time>` to add one.")
+        return
+
+    item_list = "\n".join([f"🔹 **{item.capitalize()}** - {seconds//60}m" for item, seconds in item_timers.items()])
+    
+    logging.info("📜 Sending item list.")
+    await ctx.send(f"📜 **Stored Items:**\n{item_list}")
+
 # ✅ Reload items on startup
 item_timers = load_items()
