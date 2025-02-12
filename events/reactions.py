@@ -2,15 +2,7 @@ import discord
 import config
 import time
 import logging
-from ping_manager import track_ping_reaction, remove_ping_reaction
-
-# ✅ Track bell reactions for pings
-if reaction_emoji == "🔔":
-    await track_ping_reaction(bot, payload)
-
-# ✅ Remove user from pings if they remove their reaction
-elif payload.event_type == "REACTION_REMOVE" and reaction_emoji == "🔔":
-    await remove_ping_reaction(bot, payload)
+from events.ping_manager import track_ping_reaction, remove_ping_reaction  # ✅ Import ping management
 
 async def handle_reaction(bot, payload):
     logging.debug("🚨 DEBUG: handle_reaction() function was triggered!")  
@@ -36,6 +28,14 @@ async def handle_reaction(bot, payload):
 
     reaction_emoji = str(payload.emoji)
     print(f"🔍 Reaction detected: {reaction_emoji} by {user.display_name}")
+
+    # ✅ Handle Bell reaction (Ping system)
+    if reaction_emoji == "🔔":
+        await track_ping_reaction(bot, payload)  # ✅ Add user to ping list
+
+    # ✅ Remove user from pings if they remove 🔔 reaction
+    if payload.event_type == "REACTION_REMOVE" and reaction_emoji == "🔔":
+        await remove_ping_reaction(bot, payload)
 
     # ✅ Auto-delete bot messages when clicking 🗑️
     if reaction_emoji == "🗑️" and message.author == bot.user:
@@ -68,7 +68,7 @@ async def handle_reaction(bot, payload):
         print(f"   ⏳ Original Duration: {original_duration} sec ({original_duration//60}m)")
         print(f"   🛑 Negative Adjustment: {negative_adjustment} sec ({negative_adjustment//60}m)")
 
-        # ✅ Reset Event (Always restores original interval)
+        # ✅ Reset Event (Restores original interval)
         if reaction_emoji == "✅":
             print(f"🔄 Resetting event: {item_name}")
             new_end_time = current_time + original_duration
@@ -91,11 +91,8 @@ async def handle_reaction(bot, payload):
             await new_message.add_reaction("🗑️")
             await new_message.add_reaction("🔔")  # ✅ Bell reaction for pings
 
-            if channel.name in config.GATHERING_CHANNELS.values():
-                await new_message.add_reaction("📥")
-            else:
-                for emoji in config.GATHERING_CHANNELS.keys():
-                    await new_message.add_reaction(emoji)
+            for emoji in config.GATHERING_CHANNELS.keys():
+                await new_message.add_reaction(emoji)
 
             bot.messages_to_delete[new_message.id] = (
                 new_message, original_duration, original_duration, 0, item_name, rarity_name, color, amount, channel_id, creator_name, image_url
@@ -108,7 +105,7 @@ async def handle_reaction(bot, payload):
             await message.delete()
             del bot.messages_to_delete[message.id]
 
-        # ✅ Share Event (Must Keep Remaining Time + Negative Adjustment)
+        # ✅ Share Event (Maintains Timer)
         elif reaction_emoji in config.GATHERING_CHANNELS:
             new_channel_name = config.GATHERING_CHANNELS[reaction_emoji]
             target_channel = discord.utils.get(guild.channels, name=new_channel_name)
@@ -116,14 +113,8 @@ async def handle_reaction(bot, payload):
             if target_channel:
                 print(f"📤 Sharing event: {item_name} to {new_channel_name}")
 
-                # ✅ Ensure correct time when sharing
-                shared_remaining_time = max(0, adjusted_remaining_time) if negative_adjustment > 0 else max(0, remaining_duration - (current_time - event_creation_time))
-                shared_remaining_time = min(shared_remaining_time, original_duration)
+                shared_remaining_time = min(adjusted_remaining_time, original_duration)
                 new_end_time = current_time + shared_remaining_time
-
-                print(f"🟢 DEBUG - Final Sharing Time:")
-                print(f"   ⏳ Shared Remaining Time: {shared_remaining_time} sec ({shared_remaining_time//60}m)")
-                print(f"   📌 New End Time: <t:{new_end_time}:F>")
 
                 shared_text = (
                     f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
@@ -150,7 +141,7 @@ async def handle_reaction(bot, payload):
                 )
                 await message.delete()
 
-        # ✅ Claim Event (Move to User’s Personal Channel & Allow Sharing Again)
+        # ✅ Claim Event (Move to Personal Channel)
         elif reaction_emoji == "📥":
             print(f"📥 Claiming event: {item_name} for {user.display_name}")
 
@@ -167,31 +158,12 @@ async def handle_reaction(bot, payload):
                 print(f"📌 Creating personal channel for {user.display_name}")
                 user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
 
-            claimed_remaining_time = max(0, adjusted_remaining_time)
-            new_end_time = current_time + claimed_remaining_time
-
-            claimed_text = (
-                f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
-                f"👤 **Claimed by: {user.display_name}**\n"
-                f"⏳ **Next spawn at** <t:{new_end_time}:F>\n"
-                f"⏳ **Countdown:** <t:{new_end_time}:R>\n"
-                f"⏳ **Interval: {original_duration//60}m**"
-            )
-
-            embed = discord.Embed()
-            if image_url:
-                embed.set_image(url=image_url)
-
-            new_message = await user_channel.send(claimed_text, embed=embed if image_url else None)
+            new_message = await user_channel.send(shared_text, embed=embed if image_url else None)
 
             await new_message.add_reaction("✅")
             await new_message.add_reaction("🗑️")
             await new_message.add_reaction("🔔")  # ✅ Bell reaction for pings
-            for emoji in config.GATHERING_CHANNELS.keys():  # ✅ Allow sharing after claiming
+            for emoji in config.GATHERING_CHANNELS.keys():
                 await new_message.add_reaction(emoji)
-
-            bot.messages_to_delete[new_message.id] = (
-                new_message, original_duration, claimed_remaining_time, negative_adjustment, item_name, rarity_name, color, amount, user_channel.id, user.display_name, image_url
-            )
 
             await message.delete()
