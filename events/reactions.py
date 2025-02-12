@@ -35,7 +35,8 @@ async def handle_reaction(bot, payload):
 
     # ✅ Auto-delete event messages when clicking 🗑️
     if reaction_emoji == "🗑️" and message.author == bot.user:
-        await delete_pings_for_event(message.id)  # ✅ Remove associated pings
+        await delete_pings_for_event(message.id)  # ✅ Ensure pings are deleted
+        logging.info(f"🗑️ Pings cleared for event {message.id} due to delete reaction.")
         await message.delete()
         bot.messages_to_delete.pop(message.id, None)
         return  
@@ -66,6 +67,8 @@ async def handle_reaction(bot, payload):
     # ✅ Reset Event (Restores original interval)
     if reaction_emoji == "✅":
         await delete_pings_for_event(message.id)  # ✅ Remove pings on reset
+        logging.info(f"🗑️ Pings cleared for event {message.id} due to reset reaction.")
+        
         event_text = generate_event_text(user.display_name, "Reset")
         channel = channel  
 
