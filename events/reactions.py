@@ -3,6 +3,7 @@ import config
 import time
 
 async def handle_reaction(bot, payload):
+    print("🔎 DEBUG: handle_reaction() was triggered!")  # Add this line
     """Handles reactions: reset, delete, share, and claim."""
     if payload.user_id == bot.user.id:
         return  
