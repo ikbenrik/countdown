@@ -89,6 +89,7 @@ async def handle_reaction(bot, payload):
 
             await new_message.add_reaction("✅")
             await new_message.add_reaction("🗑️")
+            await new_message.add_reaction("🔔")  # ✅ Bell reaction for pings
 
             if channel.name in config.GATHERING_CHANNELS.values():
                 await new_message.add_reaction("📥")
@@ -141,6 +142,7 @@ async def handle_reaction(bot, payload):
                 await new_message.add_reaction("✅")
                 await new_message.add_reaction("🗑️")
                 await new_message.add_reaction("📥")
+                await new_message.add_reaction("🔔")  # ✅ Bell reaction for pings
 
                 bot.messages_to_delete[new_message.id] = (
                     new_message, original_duration, shared_remaining_time, negative_adjustment, 
@@ -184,6 +186,7 @@ async def handle_reaction(bot, payload):
 
             await new_message.add_reaction("✅")
             await new_message.add_reaction("🗑️")
+            await new_message.add_reaction("🔔")  # ✅ Bell reaction for pings
             for emoji in config.GATHERING_CHANNELS.keys():  # ✅ Allow sharing after claiming
                 await new_message.add_reaction(emoji)
 
