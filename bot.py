@@ -24,7 +24,7 @@ async def on_ready():
 
 @bot.event
 async def on_raw_reaction_add(payload):
-    """Handles all reactions."""
+    print(f"🔎 DEBUG: Reaction detected: {payload.emoji.name} by User ID {payload.user_id}")
     await handle_reaction(bot, payload)
 
 @bot.command(name="cd")
