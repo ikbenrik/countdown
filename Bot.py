@@ -31,11 +31,15 @@ async def on_raw_reaction_add(payload):
 @bot.command(name="cd")
 async def command_cd(ctx, *args):
     """Handles countdown command execution."""
-    await cd(ctx, *args)  # ✅ Pass bot so we can store messages correctly
+    await cd(ctx, *args)
+    
     try:
         await ctx.message.delete()  # ✅ Deletes the original command message
     except discord.NotFound:
         print("⚠️ Warning: Command message was already deleted.")
+    except discord.Forbidden:
+        print("❌ ERROR: Bot lacks permission to delete messages.")
+
 
 # ✅ Start bot
 bot.run(config.TOKEN)
