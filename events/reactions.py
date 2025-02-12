@@ -5,11 +5,11 @@ import logging
 from events.ping_manager import track_ping_reaction, remove_ping_reaction  # ✅ Import ping management
 
 async def handle_reaction(bot, payload):
-    logging.debug("🚨 DEBUG: handle_reaction() function was triggered!")  
+    logging.debug("🚨 DEBUG: handle_reaction() function was triggered!")
 
     if payload.user_id == bot.user.id:
         print("🚫 Ignoring bot reaction.")
-        return  
+        return
 
     guild = bot.get_guild(payload.guild_id)
     channel = bot.get_channel(payload.channel_id)
@@ -17,14 +17,14 @@ async def handle_reaction(bot, payload):
 
     if not user or user.bot:
         print("🚫 Ignoring bot or missing user.")
-        return  
+        return
 
     try:
         message = await channel.fetch_message(payload.message_id)
         print(f"📩 Fetched message {message.id} in #{channel.name}")
     except discord.NotFound:
         print(f"❌ ERROR: Message {payload.message_id} not found. Probably deleted.")
-        return  
+        return
 
     reaction_emoji = str(payload.emoji)
     print(f"🔍 Reaction detected: {reaction_emoji} by {user.display_name}")
@@ -152,8 +152,11 @@ async def handle_reaction(bot, payload):
                 print(f"📌 Creating personal channel for {user.display_name}")
                 user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
 
+            shared_text = "🔔 **Event claimed!** Details unavailable."
+
             new_message = await user_channel.send(
-                reset_text if 'reset_text' in locals() else shared_text, embed=embed if image_url else None
+                reset_text if 'reset_text' in locals() else shared_text, 
+                embed=embed if image_url else None
             )
 
             await new_message.add_reaction("✅")
