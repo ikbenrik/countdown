@@ -2,7 +2,7 @@ import discord
 import config
 import time
 import logging
-from events.ping_manager import track_ping_reaction, remove_ping_reaction  # ✅ Import ping management
+from events.ping_manager import track_ping_reaction, remove_ping_reaction, delete_pings_for_event  # ✅ Import ping management
 
 async def handle_reaction(bot, payload):
     logging.debug("🚨 DEBUG: handle_reaction() function was triggered!")  
@@ -31,50 +31,28 @@ async def handle_reaction(bot, payload):
 
     # ✅ Handle Bell reaction (Ping system)
     if reaction_emoji == "🔔":
-        if hasattr(payload, 'event_type') and payload.event_type == "REACTION_REMOVE":
+        if payload.event_type == "REACTION_REMOVE":
             await remove_ping_reaction(bot, payload)
+            logging.info(f"❌ {user.display_name} removed from pings for event {message.id}")
         else:
             await track_ping_reaction(bot, payload)
         return  # ✅ Stop further processing, as this does not modify the event message
 
-    # ✅ Reset Event (Restores original interval)
-    if reaction_emoji == "✅":
-        print(f"🔄 Resetting event: {item_name}")
-        event_text = generate_event_text(user.display_name, "Reset")
-        channel = channel  # ✅ Stay in the same channel
-
-        # ✅ Remove pings when resetting (✅)
-        await delete_pings_for_event(message.id)
-        logging.info(f"🗑️ Pings cleared for event {message.id} due to reset reaction.")
-
     # ✅ Auto-delete bot messages when clicking 🗑️
     if reaction_emoji == "🗑️" and message.author == bot.user:
         print(f"🗑️ Deleting bot message: {message.id} in #{channel.name}")
-    
+
         # ✅ Remove pings when an event is deleted
         await delete_pings_for_event(message.id)
         logging.info(f"🗑️ Pings cleared for event {message.id} due to delete reaction.")
 
         await message.delete()
 
-    # ✅ Ensure the event is fully removed from tracking
+        # ✅ Ensure the event is fully removed from tracking
         if message.id in bot.messages_to_delete:
             del bot.messages_to_delete[message.id]  # ✅ Fully remove from tracking
     
         return  # ✅ Stop further execution since the message is deleted
-
-
-    # ✅ Ensure the event is fully removed from tracking
-    if message.id in bot.messages_to_delete:
-        del bot.messages_to_delete[message.id]  # ✅ Fully remove from tracking
-    return  # ✅ Stop further execution since the message is deleted
-
-
-        
-        # ✅ Ensure the event is fully removed from tracking
-    if message.id in bot.messages_to_delete:
-        del bot.messages_to_delete[message.id]  # ✅ Fully remove from tracking
-    return
 
     # ✅ Check if the message exists in bot tracking
     if message.id not in bot.messages_to_delete:
@@ -111,11 +89,10 @@ async def handle_reaction(bot, payload):
         print(f"🔄 Resetting event: {item_name}")
         event_text = generate_event_text(user.display_name, "Reset")
         channel = channel  # ✅ Stay in the same channel
-    # ✅ Remove pings when resetting (✅) or deleting (🗑️) an event
-    if reaction_emoji in ["✅", "🗑️"]:
-        await delete_pings_for_event(message.id)
-        logging.info(f"🗑️ Pings cleared for event {message.id} due to {reaction_emoji} reaction.")
 
+        # ✅ Remove pings when resetting (✅)
+        await delete_pings_for_event(message.id)
+        logging.info(f"🗑️ Pings cleared for event {message.id} due to reset reaction.")
 
     # ✅ Share Event (Replaces sharing options with claim)
     elif reaction_emoji in config.GATHERING_CHANNELS:
@@ -165,19 +142,6 @@ async def handle_reaction(bot, payload):
     elif reaction_emoji == "📥":
         for emoji in config.GATHERING_CHANNELS.keys():
             await new_message.add_reaction(emoji)  # ✅ Allow sharing after claiming
-
-    # ✅ If event is reset (`✅` reaction), set reactions based on channel type
-    elif reaction_emoji == "✅":
-        # ✅ If reset in a shared channel, give `📥` and `🔔`
-        if channel.name in config.GATHERING_CHANNELS.values():
-            await new_message.add_reaction("📥")
-            print(f"📌 Event reset in shared channel, added `📥` and `🔔`.")
-
-        # ✅ If reset in a personal channel, give sharing reactions
-        else:
-            for emoji in config.GATHERING_CHANNELS.keys():
-                await new_message.add_reaction(emoji)
-            print(f"📌 Event reset in personal channel, added sharing reactions and `🔔`.")
 
     # ✅ Store New Event Data
     bot.messages_to_delete[new_message.id] = (
