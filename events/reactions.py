@@ -52,6 +52,12 @@ async def handle_reaction(bot, payload):
         print(f"   ⏳ Original Duration: {original_duration} sec ({original_duration//60}m)")
         print(f"   🛑 Negative Adjustment (Should be Non-Zero if Set): {negative_adjustment} sec ({negative_adjustment//60}m)")
 
+        # ✅ Auto-delete bot messages when clicking 🗑️
+        elif reaction_emoji == "🗑️" and message.author == bot.user:
+            print(f"🗑️ Deleting bot message: {message.id} in #{channel.name}")
+            await message.delete()
+            return  # Stop further processing
+        
         # ✅ Reset Event (Always restores original interval)
         if reaction_emoji == "✅":
             print(f"🔄 Resetting event: {item_name}")
