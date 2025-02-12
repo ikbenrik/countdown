@@ -27,42 +27,39 @@ async def handle_reaction(bot, payload):
     # ✅ Check if the message exists in bot tracking
     if message.id in bot.messages_to_delete:
         message_data = bot.messages_to_delete[message.id]
-        message, duration, item_name, rarity_name, color, amount, channel_id, creator_name = message_data
+        message, original_duration, item_name, rarity_name, color, amount, channel_id, creator_name = message_data
+
+        current_time = int(time.time())
+        event_creation_time = int(message.created_at.timestamp())
+        remaining_time = max(0, original_duration - (current_time - event_creation_time))
 
         # ✅ Reset Event
         if reaction_emoji == "✅":
             print(f"🔄 Resetting event: {item_name}")
-
-            new_end_time = int(time.time()) + duration  # Reset timer
+            new_end_time = current_time + original_duration  # Full reset to original time
             reset_text = (
                 f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
                 f"👤 **Reset by: {user.display_name}**\n"
                 f"⏳ **Next spawn at** <t:{new_end_time}:F>\n"
                 f"⏳ **Countdown:** <t:{new_end_time}:R>\n"
-                f"⏳ **Interval: {duration//60}m**"
+                f"⏳ **Interval: {original_duration//60}m**"
             )
 
             new_message = await channel.send(reset_text)
+            await new_message.add_reaction("✅")
+            await new_message.add_reaction("🗑️")
 
-            # ✅ Always add reset and delete reactions
-            await new_message.add_reaction("✅")  # Reset event
-            await new_message.add_reaction("🗑️")  # Delete event
-
-            # ✅ Check if the event is in a shared gathering channel
+            # ✅ Check if it's in a shared channel or not
             if channel.name in config.GATHERING_CHANNELS.values():
-                await new_message.add_reaction("📥")  # Add claim reaction in shared channels
+                await new_message.add_reaction("📥")  # Claim reaction for shared channels
             else:
                 for emoji in config.GATHERING_CHANNELS.keys():
-                    await new_message.add_reaction(emoji)  # ✅ Add sharing reactions (⛏️, 🌲, 🌿)
+                    await new_message.add_reaction(emoji)  # Share reactions
 
-            # ✅ Track the new message
             bot.messages_to_delete[new_message.id] = (
-                new_message, duration, item_name, rarity_name, color, amount, channel_id, creator_name
+                new_message, original_duration, item_name, rarity_name, color, amount, channel_id, creator_name
             )
-
-            # ✅ Delete the old message
             await message.delete()
-
 
         # ✅ Delete Event
         elif reaction_emoji == "🗑️":
@@ -70,7 +67,7 @@ async def handle_reaction(bot, payload):
             await message.delete()
             del bot.messages_to_delete[message.id]
 
-        # ✅ Share Event
+        # ✅ Share Event (Keep remaining time)
         elif reaction_emoji in config.GATHERING_CHANNELS:
             new_channel_name = config.GATHERING_CHANNELS[reaction_emoji]
             target_channel = discord.utils.get(guild.channels, name=new_channel_name)
@@ -78,18 +75,14 @@ async def handle_reaction(bot, payload):
             if target_channel:
                 print(f"📤 Sharing event: {item_name} to {new_channel_name}")
 
-                # ✅ Extract remaining time
-                current_time = int(time.time())
-                event_creation_time = int(message.created_at.timestamp())
-                remaining_time = max(0, duration - (current_time - event_creation_time))
-                new_end_time = current_time + remaining_time
+                new_end_time = current_time + remaining_time  # ✅ Keep remaining time
 
                 shared_text = (
                     f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
                     f"👤 **Shared by: {user.display_name}**\n"
                     f"⏳ **Next spawn at** <t:{new_end_time}:F>\n"
                     f"⏳ **Countdown:** <t:{new_end_time}:R>\n"
-                    f"⏳ **Interval: {duration//60}m**"
+                    f"⏳ **Interval: {original_duration//60}m**"
                 )
 
                 new_message = await target_channel.send(shared_text)
