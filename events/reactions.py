@@ -72,7 +72,7 @@ async def handle_reaction(bot, payload):
 
         
         # ✅ Ensure the event is fully removed from tracking
-        if message.id in bot.messages_to_delete:
+    if message.id in bot.messages_to_delete:
             del bot.messages_to_delete[message.id]  # ✅ Fully remove from tracking
         return
 
