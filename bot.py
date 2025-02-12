@@ -3,6 +3,20 @@ from discord.ext import commands
 import config
 from commands.countdown import cd
 from events.reactions import handle_reaction
+import logging
+
+# ✅ Reset logging completely
+logging.basicConfig(
+    level=logging.DEBUG,  # 🔥 Set to DEBUG mode
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("bot_debug.log"),  # ✅ Save logs in a separate file
+        logging.StreamHandler()  # ✅ Print logs in the terminal
+    ]
+)
+
+logging.info("🚀 Bot is starting...")
+
 
 # ✅ Setup bot intents
 intents = discord.Intents.default()
