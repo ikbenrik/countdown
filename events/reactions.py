@@ -68,7 +68,7 @@ async def handle_reaction(bot, payload):
             del bot.messages_to_delete[message.id]
 
        # ✅ Share Event (Keep remaining time)
-elif reaction_emoji in config.GATHERING_CHANNELS:
+    elif reaction_emoji in config.GATHERING_CHANNELS:
     new_channel_name = config.GATHERING_CHANNELS[reaction_emoji]
     target_channel = discord.utils.get(guild.channels, name=new_channel_name)
 
