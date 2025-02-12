@@ -1,5 +1,4 @@
 import discord
-import re
 import config
 import time
 
@@ -32,6 +31,12 @@ async def handle_reaction(bot, payload):
         current_time = int(time.time())
         event_creation_time = int(message.created_at.timestamp())
         remaining_time = max(0, original_duration - (current_time - event_creation_time))
+
+        # ✅ Debugging prints to verify time calculations
+        print(f"DEBUG: Current Time: {current_time}")
+        print(f"DEBUG: Event Created At: {event_creation_time}")
+        print(f"DEBUG: Remaining Time: {remaining_time}")
+        print(f"DEBUG: Original Duration: {original_duration}")
 
         # ✅ Reset Event
         if reaction_emoji == "✅":
@@ -83,7 +88,7 @@ async def handle_reaction(bot, payload):
                     f"👤 **Shared by: {user.display_name}**\n"
                     f"⏳ **Next spawn at** <t:{new_end_time}:F>\n"
                     f"⏳ **Countdown:** <t:{new_end_time}:R>\n"
-                    f"⏳ **Interval: {original_duration//60}m**"  # Still show full interval
+                    f"⏳ **Interval: {original_duration//60}m**"  # Show full interval
                 )
 
                 new_message = await target_channel.send(shared_text)
