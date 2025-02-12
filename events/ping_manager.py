@@ -55,15 +55,15 @@ async def schedule_pings(bot):
         for message_id, users in list(event_pings.items()):  # ✅ Use list() to prevent runtime issues
             if message_id in bot.messages_to_delete:
                 event_data = bot.messages_to_delete[message_id]
-                message, original_duration, remaining_time, negative_adjustment, item_name, rarity, color, amount, channel_id, creator_name, image_url = event_data
+                message, original_duration, stored_remaining_time, negative_adjustment, item_name, rarity, color, amount, channel_id, creator_name, image_url = event_data
                 
-                event_end_time = current_time + remaining_time  # When the event will expire
-                time_left = event_end_time - current_time  # Time left in seconds
+                event_creation_time = int(message.created_at.timestamp())  # ✅ Get event creation time
+                actual_time_left = max(0, (event_creation_time + stored_remaining_time) - current_time)  # ✅ Dynamically calculate remaining time
 
                 # ✅ Debugging logs
-                logging.debug(f"🔎 Checking pings: {message_id} | Time Left: {time_left}s")
+                logging.debug(f"🔎 Checking pings: {message_id} | Time Left: {actual_time_left}s")
 
-                if 900 <= time_left < 960:  # ✅ Ping when 15 minutes left
+                if 900 <= actual_time_left < 960:  # ✅ Ping when 15 minutes left
                     logging.info(f"🔔 Sending ping for event {message_id}")
 
                     channel = bot.get_channel(channel_id)
