@@ -27,6 +27,7 @@ async def handle_reaction(bot, payload):
     # ✅ Check if the message exists in bot tracking
     if message.id in bot.messages_to_delete:
         message_data = bot.messages_to_delete[message.id]
+
         if len(message_data) == 8:  # Old format detected
             print("⚠️ WARNING: Old format detected. Fixing now.")
             message, original_duration, item_name, rarity_name, color, amount, channel_id, creator_name = message_data
@@ -39,13 +40,14 @@ async def handle_reaction(bot, payload):
         event_creation_time = int(message.created_at.timestamp())
         adjusted_remaining_time = max(0, remaining_duration - (current_time - event_creation_time))
 
+        ### 🛠 **Debugging Logs**
         print(f"DEBUG: Current Time: {current_time}")
         print(f"DEBUG: Event Created At: {event_creation_time}")
         print(f"DEBUG: Remaining Time: {adjusted_remaining_time} seconds ({adjusted_remaining_time//60}m)")
         print(f"DEBUG: Original Duration: {original_duration} seconds ({original_duration//60}m)")
-        print(f"DEBUG: Negative Adjustment: {negative_adjustment} seconds ({negative_adjustment//60}m)")
+        print(f"DEBUG: Negative Adjustment (Should be Non-Zero if Set): {negative_adjustment} seconds ({negative_adjustment//60}m)")
 
-        # ✅ Reset Event (ALWAYS restores original interval)
+        # ✅ Reset Event (Always restores original interval)
         if reaction_emoji == "✅":
             print(f"🔄 Resetting event: {item_name}")
             new_end_time = current_time + original_duration  # Reset to full duration, ignoring negative adjustments
@@ -79,7 +81,7 @@ async def handle_reaction(bot, payload):
             await message.delete()
             del bot.messages_to_delete[message.id]
 
-        # ✅ Share Event (Keeps remaining time + **negative time adjustments**)
+        # ✅ Share Event (Must Keep Remaining Time + Negative Adjustment)
         elif reaction_emoji in config.GATHERING_CHANNELS:
             new_channel_name = config.GATHERING_CHANNELS[reaction_emoji]
             target_channel = discord.utils.get(guild.channels, name=new_channel_name)
@@ -87,10 +89,14 @@ async def handle_reaction(bot, payload):
             if target_channel:
                 print(f"📤 Sharing event: {item_name} to {new_channel_name}")
 
-                # ✅ Fix: Ensure **negative time adjustments are preserved**
+                # ✅ Fix: Ensure negative adjustment is applied correctly
                 shared_remaining_time = max(0, adjusted_remaining_time + negative_adjustment)
                 shared_remaining_time = min(shared_remaining_time, original_duration)  # Ensure it never exceeds full time
-                new_end_time = current_time + shared_remaining_time  # ✅ Keeps remaining time
+                new_end_time = current_time + shared_remaining_time
+
+                print(f"🟢 NEW DEBUG - Sharing with:")
+                print(f"🕒 Shared Remaining Time: {shared_remaining_time} sec ({shared_remaining_time//60}m)")
+                print(f"🕒 Adjusted End Time: <t:{new_end_time}:F>")
 
                 shared_text = (
                     f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
@@ -105,7 +111,6 @@ async def handle_reaction(bot, payload):
                 await new_message.add_reaction("🗑️")
                 await new_message.add_reaction("📥")
 
-                # ✅ Fix: Store the correctly adjusted remaining time
                 bot.messages_to_delete[new_message.id] = (
                     new_message, original_duration, shared_remaining_time, negative_adjustment, item_name, rarity_name, color, amount, target_channel.id, creator_name
                 )
