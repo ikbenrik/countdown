@@ -31,7 +31,7 @@ async def handle_reaction(bot, payload):
 
     # ✅ Handle Bell reaction (Ping system)
     if reaction_emoji == "🔔":
-        await track_ping_reaction(bot, payload, message.jump_url)  # ✅ Store event link for pings
+        await track_ping_reaction(bot, payload)  # ✅ Store event link for pings
 
     # ✅ Remove user from pings if they remove 🔔 reaction
     if payload.event_type == "REACTION_REMOVE" and reaction_emoji == "🔔":
@@ -135,7 +135,7 @@ async def handle_reaction(bot, payload):
                 )
                 await message.delete()
 
-        # ✅ Claim Event (Move to Personal Channel) - Fixed missing shared_text
+        # ✅ Claim Event (Move to Personal Channel) - Fixed claim error
         elif reaction_emoji == "📥":
             print(f"📥 Claiming event: {item_name} for {user.display_name}")
 
@@ -153,7 +153,7 @@ async def handle_reaction(bot, payload):
                 user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
 
             new_message = await user_channel.send(
-                shared_text if 'shared_text' in locals() else reset_text, embed=embed if image_url else None
+                reset_text if 'reset_text' in locals() else shared_text, embed=embed if image_url else None
             )
 
             await new_message.add_reaction("✅")
