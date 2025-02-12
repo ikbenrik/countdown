@@ -4,7 +4,7 @@ import config
 from commands.countdown import cd
 from events.reactions import handle_reaction
 
-# ✅ Setup intents
+# ✅ Setup bot intents
 intents = discord.Intents.default()
 intents.message_content = True
 intents.reactions = True  
@@ -17,27 +17,24 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
-    """Ensures all necessary bot variables are initialized on startup."""
-    bot.messages_to_delete = {}  # ✅ Ensure this is properly initialized
-
+    """Ensures the bot is ready."""
+    bot.messages_to_delete = {}  # ✅ Ensure message tracking works
     print(f"✅ Logged in as {bot.user}")
-    print("✅ Bot is ready and listening for reactions!")
+    print("✅ Bot is running and ready for reactions!")
 
 @bot.event
 async def on_raw_reaction_add(payload):
-    """Handles all reactions on messages."""
-    await handle_reaction(bot, payload)  # ✅ Pass bot to reaction handler
+    """Handles all reactions."""
+    await handle_reaction(bot, payload)
 
 @bot.command(name="cd")
 async def command_cd(ctx, *args):
-    """Handles countdown command execution."""
-    await cd(bot, ctx, *args)  # ✅ Now passing bot correctly
+    """Handles event creation with `!cd` command."""
+    await cd(bot, ctx, *args)
     try:
-        await ctx.message.delete()  # ✅ Deletes the original command message
+        await ctx.message.delete()  # ✅ Deletes command message
     except discord.NotFound:
         print("⚠️ Warning: Command message was already deleted.")
-
-
 
 # ✅ Start bot
 bot.run(config.TOKEN)
