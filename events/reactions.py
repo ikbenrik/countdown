@@ -1,6 +1,11 @@
 import discord
 import config
 import time
+import logging  # ✅ Ensure logging works
+
+async def handle_reaction(bot, payload):
+    logging.debug("🚨 DEBUG: handle_reaction() function was triggered!")  # 🔥 Immediate log!
+
 
 async def handle_reaction(bot, payload):
     print("🔎 DEBUG: handle_reaction() was triggered!")  
