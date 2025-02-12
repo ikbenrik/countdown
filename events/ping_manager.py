@@ -14,7 +14,6 @@ async def track_ping_reaction(bot, payload):
         return
 
     guild = bot.get_guild(payload.guild_id)
-    channel = bot.get_channel(payload.channel_id)
     message_id = payload.message_id
     user = guild.get_member(payload.user_id)
 
