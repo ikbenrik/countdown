@@ -39,7 +39,7 @@ async def handle_reaction(bot, payload):
 
         if len(message_data) == 8:  # Old format detected
             print("⚠️ WARNING: Old format detected. Fixing now.")
-            message, original_duration, item_name, rarity_name, color, amount, channel_id, creator_name = message_data
+            message, original_duration, remaining_duration, negative_adjustment, item_name, rarity_name, color, amount, channel_id, creator_name = message_data
             remaining_duration = original_duration
             negative_adjustment = 0  # Assume no negative time for old events
         else:
