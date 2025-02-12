@@ -31,7 +31,7 @@ async def on_raw_reaction_add(payload):
 @bot.command(name="cd")
 async def command_cd(ctx, *args):
     """Handles countdown command execution."""
-    await cd(bot, ctx, *args)  # ✅ Pass bot so we can store messages correctly
+    await cd(bot, *args)  # ✅ Pass bot so we can store messages correctly
     try:
         await ctx.message.delete()  # ✅ Deletes the original command message
     except discord.NotFound:
