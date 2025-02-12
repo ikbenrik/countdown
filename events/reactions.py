@@ -28,6 +28,12 @@ async def handle_reaction(bot, payload):
     reaction_emoji = str(payload.emoji)
     print(f"🔍 Reaction detected: {reaction_emoji} by {user.display_name}")
 
+    # ✅ Auto-delete bot messages when clicking 🗑️
+    if reaction_emoji == "🗑️" and message.author == bot.user:
+        print(f"🗑️ Deleting bot message: {message.id} in #{channel.name}")
+        await message.delete()
+        return  # Stop further processing
+
     # ✅ Check if the message exists in bot tracking
     if message.id in bot.messages_to_delete:
         message_data = bot.messages_to_delete[message.id]
@@ -52,12 +58,6 @@ async def handle_reaction(bot, payload):
         print(f"   ⏳ Original Duration: {original_duration} sec ({original_duration//60}m)")
         print(f"   🛑 Negative Adjustment (Should be Non-Zero if Set): {negative_adjustment} sec ({negative_adjustment//60}m)")
 
-        # ✅ Auto-delete bot messages when clicking 🗑️
-        elif reaction_emoji == "🗑️" and message.author == bot.user:
-            print(f"🗑️ Deleting bot message: {message.id} in #{channel.name}")
-            await message.delete()
-            return  # Stop further processing
-        
         # ✅ Reset Event (Always restores original interval)
         if reaction_emoji == "✅":
             print(f"🔄 Resetting event: {item_name}")
@@ -127,55 +127,3 @@ async def handle_reaction(bot, payload):
                     item_name, rarity_name, color, amount, target_channel.id, creator_name
                 )
                 await message.delete()
-
-        # ✅ Claim Event (Move to User’s Personal Channel)
-        elif reaction_emoji == "📥":
-            print(f"📥 Claiming event: {item_name} for {user.display_name}")
-
-            user_channel_name = user.display_name.lower().replace(" ", "-")
-            # 🔍 Find "PERSONAL INTEL" category case-insensitively
-            personal_category = next((cat for cat in guild.categories if cat.name.lower() == "personal intel"), None)
-
-            if not personal_category:
-                print(f"❌ ERROR: 'PERSONAL INTEL' category not found! Listing available categories:")
-                for category in guild.categories:
-                    print(f"   📌 Found Category: {category.name}")
-                return
-
-            if not personal_category:
-                print("❌ ERROR: 'PERSONAL INTEL' category not found! Cannot create personal channels.")
-                return
-
-            user_channel = discord.utils.get(guild.text_channels, name=user_channel_name, category=personal_category)
-
-            if not user_channel:
-                print(f"📌 Creating personal channel for {user.display_name}")
-                user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
-
-            claimed_remaining_time = max(0, adjusted_remaining_time)
-            new_end_time = current_time + claimed_remaining_time
-
-            print(f"🟢 DEBUG - Claiming Event:")
-            print(f"   ⏳ Claimed Remaining Time: {claimed_remaining_time} sec ({claimed_remaining_time//60}m)")
-            print(f"   📌 New End Time: <t:{new_end_time}:F>")
-
-            claimed_text = (
-                f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
-                f"👤 **Claimed by: {user.display_name}**\n"
-                f"⏳ **Next spawn at** <t:{new_end_time}:F>\n"
-                f"⏳ **Countdown:** <t:{new_end_time}:R>\n"
-                f"⏳ **Interval: {original_duration//60}m**"
-            )
-
-            new_message = await user_channel.send(claimed_text)
-            await new_message.add_reaction("✅")
-            await new_message.add_reaction("🗑️")
-            for emoji in config.GATHERING_CHANNELS.keys():
-                await new_message.add_reaction(emoji)
-
-            bot.messages_to_delete[new_message.id] = (
-                new_message, original_duration, claimed_remaining_time, negative_adjustment, 
-                item_name, rarity_name, color, amount, user_channel.id, user.display_name
-            )
-            await message.delete()
-            print(f"✅ Successfully moved {item_name} to {user.display_name}'s personal channel!")
