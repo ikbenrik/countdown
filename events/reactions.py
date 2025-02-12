@@ -100,8 +100,14 @@ async def handle_reaction(bot, payload):
                 print(f"📤 Sharing event: {item_name} to {new_channel_name}")
 
                 # ✅ Fix: Ensure negative adjustment is applied correctly
-                shared_remaining_time = max(0, adjusted_remaining_time + negative_adjustment)
-                shared_remaining_time = min(shared_remaining_time, original_duration)
+                # ✅ Correctly apply negative time when sharing
+                shared_remaining_time = max(0, remaining_duration)  # Ensure it's non-negative
+                new_end_time = current_time + shared_remaining_time  # Keep remaining time intact
+
+                print(f"🟢 DEBUG - Final Sharing Time:")
+                print(f"   ⏳ Shared Remaining Time: {shared_remaining_time} sec ({shared_remaining_time//60}m)")
+                print(f"   📌 New End Time: <t:{new_end_time}:F>")
+
                 new_end_time = current_time + shared_remaining_time
 
                 print(f"🟢 DEBUGGING - Sharing Event with:")
