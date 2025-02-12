@@ -3,7 +3,7 @@ from discord.ext import commands
 import config
 from commands.countdown import cd
 from events.reactions import handle_reaction
-from commands.items import add_item, remove_item
+from commands.items import add_item, remove_item, list_items 
 import logging
 
 # ✅ Reset logging completely
@@ -49,6 +49,11 @@ async def command_cd(ctx, *args):
         await ctx.message.delete()  # ✅ Deletes the command message
     except discord.NotFound:
         print("⚠️ Warning: Command message was already deleted.")
+
+@bot.command(name="list")
+async def command_list(ctx):
+    """Handles listing all items via `!list`"""
+    await list_items(ctx)
 
 @bot.command(name="add")
 async def command_add(ctx, item_name: str, duration: str):
