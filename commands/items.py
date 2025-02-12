@@ -56,4 +56,5 @@ async def remove_item(ctx, item_name: str):
         logging.info(f"🗑️ Removed item: {item_name}")
         await ctx.send(f"🗑️ **{item_name.capitalize()}** has been removed.")
     else:
-        logging.warning(f"⚠️ Attempted to remove non-existe
+        # ✅ Fix the unterminated f-string (missing closing quote)
+        logging.warning(f"⚠️ Attempted to remove non-existent item: {item_name}")
