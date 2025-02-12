@@ -37,10 +37,32 @@ async def handle_reaction(bot, payload):
             await track_ping_reaction(bot, payload)
         return  # ✅ Stop further processing, as this does not modify the event message
 
-    # ✅ Auto-delete bot messages when clicking 🗑️
-    if reaction_emoji == "🗑️" and message.author == bot.user:
-        print(f"🗑️ Deleting bot message: {message.id} in #{channel.name}")
-        await message.delete()
+    # ✅ Reset Event (Restores original interval)
+    if reaction_emoji == "✅":
+        print(f"🔄 Resetting event: {item_name}")
+        event_text = generate_event_text(user.display_name, "Reset")
+        channel = channel  # ✅ Stay in the same channel
+
+        # ✅ Remove pings when resetting (✅)
+        await delete_pings_for_event(message.id)
+        logging.info(f"🗑️ Pings cleared for event {message.id} due to reset reaction.")
+
+# ✅ Auto-delete bot messages when clicking 🗑️
+if reaction_emoji == "🗑️" and message.author == bot.user:
+    print(f"🗑️ Deleting bot message: {message.id} in #{channel.name}")
+    
+    # ✅ Remove pings when an event is deleted
+    await delete_pings_for_event(message.id)
+    logging.info(f"🗑️ Pings cleared for event {message.id} due to delete reaction.")
+
+    await message.delete()
+
+    # ✅ Ensure the event is fully removed from tracking
+    if message.id in bot.messages_to_delete:
+        del bot.messages_to_delete[message.id]  # ✅ Fully remove from tracking
+    return  # ✅ Stop further execution since the message is deleted
+
+
         
         # ✅ Ensure the event is fully removed from tracking
         if message.id in bot.messages_to_delete:
@@ -82,6 +104,11 @@ async def handle_reaction(bot, payload):
         print(f"🔄 Resetting event: {item_name}")
         event_text = generate_event_text(user.display_name, "Reset")
         channel = channel  # ✅ Stay in the same channel
+    # ✅ Remove pings when resetting (✅) or deleting (🗑️) an event
+    if reaction_emoji in ["✅", "🗑️"]:
+        await delete_pings_for_event(message.id)
+        logging.info(f"🗑️ Pings cleared for event {message.id} due to {reaction_emoji} reaction.")
+
 
     # ✅ Share Event (Replaces sharing options with claim)
     elif reaction_emoji in config.GATHERING_CHANNELS:
