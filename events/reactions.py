@@ -44,7 +44,7 @@ async def handle_reaction(bot, payload):
             message, original_duration, remaining_duration, item_name, rarity_name, color, amount, channel_id, creator_name = message_data
             negative_adjustment = 0  # Assume no negative time for old events
         else:
-            message, original_duration, remaining_duration, negative_adjustment, item_name, rarity_name, color, amount, channel_id, creator_name = message_data
+            message, original_duration, remaining_duration, negative_adjustment, item_name, rarity_name, color, amount, channel_id, creator_name, image_url = message_data
 
         current_time = int(time.time())
         event_creation_time = int(message.created_at.timestamp())
