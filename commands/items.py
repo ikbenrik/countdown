@@ -1,6 +1,8 @@
 import logging
 import json
 import os
+import asyncio  # Needed for delayed deletion
+from utils.helpers import load_items
 
 ITEMS_FILE = "items.json"
 
@@ -64,17 +66,25 @@ from utils.helpers import load_items
 item_timers = load_items()
 
 async def list_items(ctx):
-    """Displays all stored items and their durations."""
+    """Displays all stored items and their durations in hours & minutes."""
     logging.debug(f"📜 User {ctx.author} requested the item list.")
 
     if not item_timers:
-        await ctx.send("📭 **No items stored!** Use `!add <item> <time>` to add one.")
+        response = await ctx.send("📭 **No items stored!** Use `!add <item> <time>` to add one.")
+        await response.add_reaction("🗑️")  # 🗑️ Trash Can for Deletion
         return
 
-    item_list = "\n".join([f"🔹 **{item.capitalize()}** - {seconds//60}m" for item, seconds in item_timers.items()])
-    
+    # Convert stored times into hours & minutes format
+    item_list = "\n".join([
+        f"🔹 **{item.capitalize()}** - {seconds // 3600}h {seconds % 3600 // 60}m"
+        for item, seconds in item_timers.items()
+    ])
+
     logging.info("📜 Sending item list.")
-    await ctx.send(f"📜 **Stored Items:**\n{item_list}")
+
+    # Send message and add trash reaction for deletion
+    response = await ctx.send(f"📜 **Stored Items:**\n{item_list}")
+    await response.add_reaction("🗑️")  # 🗑️ Trash Can for Deletion
 
 # ✅ Reload items on startup
 item_timers = load_items()
