@@ -31,7 +31,7 @@ async def handle_reaction(bot, payload):
 
     # ✅ Handle Bell reaction (Ping system)
     if reaction_emoji == "🔔":
-        await track_ping_reaction(bot, payload)  # ✅ Store event link for pings
+        await track_ping_reaction(bot, payload)
 
     # ✅ Remove user from pings if they remove 🔔 reaction
     if hasattr(payload, 'event_type') and payload.event_type == "REACTION_REMOVE" and reaction_emoji == "🔔":
@@ -86,7 +86,7 @@ async def handle_reaction(bot, payload):
             new_end_time = current_time + original_duration
             event_text = generate_event_text(user.display_name, "Reset")
 
-        # ✅ Share Event (Ensures Bell Reaction)
+        # ✅ Share Event (Removes share reactions, only allows claim)
         elif reaction_emoji in config.GATHERING_CHANNELS:
             new_channel_name = config.GATHERING_CHANNELS[reaction_emoji]
             target_channel = discord.utils.get(guild.channels, name=new_channel_name)
@@ -132,10 +132,15 @@ async def handle_reaction(bot, payload):
         # ✅ Add Reactions
         await new_message.add_reaction("✅")
         await new_message.add_reaction("🗑️")
-        await new_message.add_reaction("📥")  # ✅ Ensure claimable events
+        await new_message.add_reaction("📥")  # ✅ Always allow claiming
         await new_message.add_reaction("🔔")  # ✅ Bell reaction for pings
-        for emoji in config.GATHERING_CHANNELS.keys():
-            await new_message.add_reaction(emoji)
+        
+        # ✅ If event is shared, REMOVE sharing reactions (⛏️, 🌲, 🌿, etc.)
+        if reaction_emoji in config.GATHERING_CHANNELS:
+            print(f"📌 Event moved to a shared channel, replacing share options with claim (`📥`).")
+        else:
+            for emoji in config.GATHERING_CHANNELS.keys():
+                await new_message.add_reaction(emoji)
 
         # ✅ Store New Event Data
         bot.messages_to_delete[new_message.id] = (
