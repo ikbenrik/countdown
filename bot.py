@@ -4,18 +4,9 @@ import config
 from commands.countdown import cd
 from events.reactions import handle_reaction
 from commands.items import add_item, remove_item, list_items  # ✅ Import all item commands
-from events.ping_manager import schedule_pings
+from events.ping_manager import schedule_pings  # ✅ Fixed Import
 import asyncio
 import logging
-
-@bot.event
-async def on_ready():
-    """Ensures the bot is ready and starts background tasks."""
-    bot.messages_to_delete = {}  # ✅ Ensure message tracking works
-    print(f"✅ Logged in as {bot.user}")
-    print("✅ Bot is running and ready for reactions!")
-
-    bot.loop.create_task(schedule_pings(bot))  # ✅ Start the ping task
 
 # ✅ Reset logging completely
 logging.basicConfig(
@@ -42,10 +33,13 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
-    """Ensures the bot is ready."""
+    """Ensures the bot is ready and starts background tasks."""
     bot.messages_to_delete = {}  # ✅ Ensure message tracking works
     print(f"✅ Logged in as {bot.user}")
     print("✅ Bot is running and ready for reactions!")
+
+    # ✅ Start the ping scheduler
+    bot.loop.create_task(schedule_pings(bot))
 
 @bot.event
 async def on_raw_reaction_add(payload):
