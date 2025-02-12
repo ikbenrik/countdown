@@ -94,24 +94,15 @@ async def handle_reaction(bot, payload):
             if target_channel:
                 print(f"📤 Sharing event: {item_name} to {new_channel_name}")
 
-                # ✅ Ensure the correct time is applied when sharing
-                if negative_adjustment > 0:
-                    # If a negative adjustment was originally applied, retain it
-                    shared_remaining_time = max(0, adjusted_remaining_time)  # Use adjusted remaining time
-                else:
-                    # If no negative time was set, just use the true remaining time
-                    shared_remaining_time = max(0, remaining_duration - (current_time - event_creation_time))
-
-                # ✅ Ensure it never resets to the full interval when sharing
+                # ✅ Ensure correct time when sharing
+                shared_remaining_time = max(0, adjusted_remaining_time) if negative_adjustment > 0 else max(0, remaining_duration - (current_time - event_creation_time))
                 shared_remaining_time = min(shared_remaining_time, original_duration)
                 new_end_time = current_time + shared_remaining_time
 
-                # 🟢 Debugging to confirm correct values
                 print(f"🟢 DEBUG - Final Sharing Time:")
                 print(f"   ⏳ Shared Remaining Time: {shared_remaining_time} sec ({shared_remaining_time//60}m)")
                 print(f"   📌 New End Time: <t:{new_end_time}:F>")
 
-                # ✅ Prepare the shared message with correct remaining time
                 shared_text = (
                     f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
                     f"👤 **Shared by: {user.display_name}**\n"
@@ -120,19 +111,58 @@ async def handle_reaction(bot, payload):
                     f"⏳ **Interval: {original_duration//60}m**"
                 )
 
-                # ✅ Send the corrected shared message
                 new_message = await target_channel.send(shared_text)
+                await new_message.add_reaction("✅")
+                await new_message.add_reaction("🗑️")
+                await new_message.add_reaction("📥")
 
-                # ✅ **Fix: Ensure reactions are added**
-                await new_message.add_reaction("✅")  # Reset
-                await new_message.add_reaction("🗑️")  # Delete
-                await new_message.add_reaction("📥")  # Claim reaction in shared channels
-
-                # ✅ Track new message with the **correct remaining time**
                 bot.messages_to_delete[new_message.id] = (
                     new_message, original_duration, shared_remaining_time, negative_adjustment, 
                     item_name, rarity_name, color, amount, target_channel.id, creator_name
                 )
-
-                # ✅ Delete the original message after sharing
                 await message.delete()
+
+        # ✅ Claim Event (Move to User’s Personal Channel)
+        elif reaction_emoji == "📥":
+            print(f"📥 Claiming event: {item_name} for {user.display_name}")
+
+            user_channel_name = user.display_name.lower().replace(" ", "-")
+            personal_category = discord.utils.get(guild.categories, name="PERSONAL INTEL")
+
+            if not personal_category:
+                print("❌ ERROR: 'PERSONAL INTEL' category not found! Cannot create personal channels.")
+                return
+
+            user_channel = discord.utils.get(guild.text_channels, name=user_channel_name, category=personal_category)
+
+            if not user_channel:
+                print(f"📌 Creating personal channel for {user.display_name}")
+                user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
+
+            claimed_remaining_time = max(0, adjusted_remaining_time)
+            new_end_time = current_time + claimed_remaining_time
+
+            print(f"🟢 DEBUG - Claiming Event:")
+            print(f"   ⏳ Claimed Remaining Time: {claimed_remaining_time} sec ({claimed_remaining_time//60}m)")
+            print(f"   📌 New End Time: <t:{new_end_time}:F>")
+
+            claimed_text = (
+                f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
+                f"👤 **Claimed by: {user.display_name}**\n"
+                f"⏳ **Next spawn at** <t:{new_end_time}:F>\n"
+                f"⏳ **Countdown:** <t:{new_end_time}:R>\n"
+                f"⏳ **Interval: {original_duration//60}m**"
+            )
+
+            new_message = await user_channel.send(claimed_text)
+            await new_message.add_reaction("✅")
+            await new_message.add_reaction("🗑️")
+            for emoji in config.GATHERING_CHANNELS.keys():
+                await new_message.add_reaction(emoji)
+
+            bot.messages_to_delete[new_message.id] = (
+                new_message, original_duration, claimed_remaining_time, negative_adjustment, 
+                item_name, rarity_name, color, amount, user_channel.id, user.display_name
+            )
+            await message.delete()
+            print(f"✅ Successfully moved {item_name} to {user.display_name}'s personal channel!")
