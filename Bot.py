@@ -18,8 +18,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 @bot.event
 async def on_ready():
     """Ensures all necessary bot variables are initialized on startup."""
-    if not hasattr(bot, "messages_to_delete"):
-        bot.messages_to_delete = {}  # ✅ Prevents missing attribute errors
+    bot.messages_to_delete = {}  # ✅ Ensure this is properly initialized
 
     print(f"✅ Logged in as {bot.user}")
     print("✅ Bot is ready and listening for reactions!")
@@ -32,8 +31,11 @@ async def on_raw_reaction_add(payload):
 @bot.command(name="cd")
 async def command_cd(ctx, *args):
     """Handles countdown command execution."""
-    await cd(ctx, *args)
-    await ctx.message.delete()  # ✅ Deletes the original command message
+    await cd(bot, ctx, *args)  # ✅ Pass bot so we can store messages correctly
+    try:
+        await ctx.message.delete()  # ✅ Deletes the original command message
+    except discord.NotFound:
+        print("⚠️ Warning: Command message was already deleted.")
 
 # ✅ Start bot
 bot.run(config.TOKEN)
