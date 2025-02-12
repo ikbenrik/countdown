@@ -76,10 +76,7 @@ async def handle_reaction(bot, payload):
             if image_url:
                 embed.set_image(url=image_url)
 
-            if image_url:
-                new_message = await channel.send(reset_text, embed=embed)
-            else:
-                new_message = await channel.send(reset_text)
+            new_message = await channel.send(reset_text, embed=embed if image_url else None)
 
             await new_message.add_reaction("✅")
             await new_message.add_reaction("🗑️")
@@ -130,10 +127,7 @@ async def handle_reaction(bot, payload):
                 if image_url:
                     embed.set_image(url=image_url)
 
-                if image_url:
-                    new_message = await target_channel.send(shared_text, embed=embed)
-                else:
-                    new_message = await target_channel.send(shared_text)
+                new_message = await target_channel.send(shared_text, embed=embed if image_url else None)
 
                 await new_message.add_reaction("✅")
                 await new_message.add_reaction("🗑️")
@@ -145,7 +139,7 @@ async def handle_reaction(bot, payload):
                 )
                 await message.delete()
 
-        # ✅ Claim Event (Move to User’s Personal Channel)
+        # ✅ Claim Event (Move to User’s Personal Channel & Allow Sharing Again)
         elif reaction_emoji == "📥":
             print(f"📥 Claiming event: {item_name} for {user.display_name}")
 
@@ -181,7 +175,11 @@ async def handle_reaction(bot, payload):
 
             await new_message.add_reaction("✅")
             await new_message.add_reaction("🗑️")
+            for emoji in config.GATHERING_CHANNELS.keys():  # ✅ Allow sharing after claiming
+                await new_message.add_reaction(emoji)
 
-            bot.messages_to_delete[new_message.id] = (new_message, original_duration, claimed_remaining_time, negative_adjustment, item_name, rarity_name, color, amount, user_channel.id, user.display_name, image_url)
+            bot.messages_to_delete[new_message.id] = (
+                new_message, original_duration, claimed_remaining_time, negative_adjustment, item_name, rarity_name, color, amount, user_channel.id, user.display_name, image_url
+            )
 
             await message.delete()
