@@ -65,26 +65,35 @@ async def remove_item(ctx, item_name: str):
 from utils.helpers import load_items
 item_timers = load_items()
 
-async def list_items(ctx):
-    """Displays all stored items and their durations in hours & minutes."""
-    logging.debug(f"📜 User {ctx.author} requested the item list.")
+async def add_item(ctx, item_name: str, duration_str: str):
+    """Adds a new item with a duration in hours/minutes."""
+    duration_mapping = {"h": 3600, "m": 60}
+    duration = sum(int(value[:-1]) * duration_mapping[value[-1]] for value in duration_str.split() if value[-1] in duration_mapping)
 
-    if not item_timers:
-        response = await ctx.send("📭 **No items stored!** Use `!add <item> <time>` to add one.")
-        await response.add_reaction("🗑️")  # 🗑️ Trash Can for Deletion
-        return
+    item_timers[item_name.lower()] = duration
+    logging.info(f"✅ Added item: {item_name} with duration {duration // 3600}h {duration % 3600 // 60}m")
 
-    # Convert stored times into hours & minutes format
-    item_list = "\n".join([
-        f"🔹 **{item.capitalize()}** - {seconds // 3600}h {seconds % 3600 // 60}m"
-        for item, seconds in item_timers.items()
-    ])
-
-    logging.info("📜 Sending item list.")
-
-    # Send message and add trash reaction for deletion
-    response = await ctx.send(f"📜 **Stored Items:**\n{item_list}")
+    response = await ctx.send(f"✅ **Added:** {item_name.capitalize()} - {duration // 3600}h {duration % 3600 // 60}m")
     await response.add_reaction("🗑️")  # 🗑️ Trash Can for Deletion
+
+    try:
+        await ctx.message.delete()  # ✅ Delete user command after execution
+    except discord.NotFound:
+        print("⚠️ Warning: Command message was already deleted.")
+
+
+async def remove_item(ctx, item_name: str):
+    """Removes an item from the list."""
+    if item_name.lower() in item_timers:
+        del item_timers[item_name.lower()]
+        logging.info(f"🗑️ Removed item: {item_name}")
+
+        response = await ctx.send(f"🗑️ **Removed:** {item_name.capitalize()}")
+        await response.add_reaction("🗑️")  # 🗑️ Trash Can for Deletion
+    else:
+        logging.warning(f"⚠️ Attempted to remove non-existent item: {item_name}")
+        response = await ctx.send(f"⚠️ **Item not found:** {item_name.capitalize()}")
+        await response.add_reaction("🗑️")  # 🗑️ Trash Can for Deletion
 
 # ✅ Reload items on startup
 item_timers = load_items()
