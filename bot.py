@@ -30,11 +30,12 @@ async def on_raw_reaction_add(payload):
 @bot.command(name="cd")
 async def command_cd(ctx, *args):
     """Handles event creation with `!cd` command."""
-    await cd(bot, ctx, *args)
+    await cd(ctx, *args)  # ✅ Now passing `ctx` properly
     try:
         await ctx.message.delete()  # ✅ Deletes command message
     except discord.NotFound:
         print("⚠️ Warning: Command message was already deleted.")
+
 
 # ✅ Start bot
 bot.run(config.TOKEN)
