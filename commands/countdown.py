@@ -49,10 +49,17 @@ async def cd(bot, ctx, *args):
 
     message = await ctx.send(countdown_text)
 
-    await message.add_reaction("✅")
-    await message.add_reaction("🗑️")
+  # ✅ Always add reset and delete reactions
+await message.add_reaction("✅")  # Reset event
+await message.add_reaction("🗑️")  # Delete event
+
+# ✅ Check if the event is in a shared gathering channel
+if ctx.channel.name in config.GATHERING_CHANNELS.values():
+    await message.add_reaction("📥")  # Add claim reaction instead of sharing
+else:
     for emoji in config.GATHERING_CHANNELS.keys():
-        await message.add_reaction(emoji)
+        await message.add_reaction(emoji)  # ✅ Add sharing reactions (⛏️, 🌲, 🌿)
+
 
     bot.messages_to_delete[message.id] = (
         message, duration, item_name.capitalize(), rarity_name, color, amount, ctx.channel.id, ctx.author.display_name
