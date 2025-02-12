@@ -72,6 +72,7 @@ async def cd(bot, ctx, *args):
 
     # ✅ Store message details, including the original duration
     bot.messages_to_delete[message.id] = (
-        message, original_duration, duration - negative_offset,  # ✅ Store remaining time correctly
+        message, original_duration, duration - negative_offset, negative_offset,  # ✅ Store the negative offset
         item_name.capitalize(), rarity_name, color, amount, ctx.channel.id, ctx.author.display_name
 )
+
