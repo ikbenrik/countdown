@@ -6,6 +6,7 @@ async def handle_reaction(bot, payload):
     print("🔎 DEBUG: handle_reaction() was triggered!")  
 
     if payload.user_id == bot.user.id:
+        print("🚫 Ignoring bot reaction.")
         return  
 
     guild = bot.get_guild(payload.guild_id)
@@ -13,10 +14,12 @@ async def handle_reaction(bot, payload):
     user = guild.get_member(payload.user_id)
 
     if not user or user.bot:
+        print("🚫 Ignoring bot or missing user.")
         return  
 
     try:
         message = await channel.fetch_message(payload.message_id)
+        print(f"📩 Fetched message {message.id} in #{channel.name}")
     except discord.NotFound:
         print(f"❌ ERROR: Message {payload.message_id} not found. Probably deleted.")
         return  
@@ -27,6 +30,7 @@ async def handle_reaction(bot, payload):
     # ✅ Check if the message exists in bot tracking
     if message.id in bot.messages_to_delete:
         message_data = bot.messages_to_delete[message.id]
+        print(f"✅ Found message {message.id} in tracked events.")
 
         if len(message_data) == 8:  # Old format detected
             print("⚠️ WARNING: Old format detected. Fixing now.")
@@ -41,16 +45,17 @@ async def handle_reaction(bot, payload):
         adjusted_remaining_time = max(0, remaining_duration - (current_time - event_creation_time))
 
         ### 🛠 **Debugging Logs**
-        print(f"DEBUG: Current Time: {current_time}")
-        print(f"DEBUG: Event Created At: {event_creation_time}")
-        print(f"DEBUG: Remaining Time: {adjusted_remaining_time} seconds ({adjusted_remaining_time//60}m)")
-        print(f"DEBUG: Original Duration: {original_duration} seconds ({original_duration//60}m)")
-        print(f"DEBUG: Negative Adjustment (Should be Non-Zero if Set): {negative_adjustment} seconds ({negative_adjustment//60}m)")
+        print(f"🛠 DEBUGGING TIME VALUES:")
+        print(f"   🕒 Current Time: {current_time}")
+        print(f"   📌 Event Created At: {event_creation_time}")
+        print(f"   ⏳ Remaining Time: {adjusted_remaining_time} sec ({adjusted_remaining_time//60}m)")
+        print(f"   ⏳ Original Duration: {original_duration} sec ({original_duration//60}m)")
+        print(f"   🛑 Negative Adjustment (Should be Non-Zero if Set): {negative_adjustment} sec ({negative_adjustment//60}m)")
 
         # ✅ Reset Event (Always restores original interval)
         if reaction_emoji == "✅":
             print(f"🔄 Resetting event: {item_name}")
-            new_end_time = current_time + original_duration  # Reset to full duration, ignoring negative adjustments
+            new_end_time = current_time + original_duration
 
             reset_text = (
                 f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
@@ -65,7 +70,7 @@ async def handle_reaction(bot, payload):
             await new_message.add_reaction("🗑️")
 
             if channel.name in config.GATHERING_CHANNELS.values():
-                await new_message.add_reaction("📥")  # Claim reaction for shared channels
+                await new_message.add_reaction("📥")
             else:
                 for emoji in config.GATHERING_CHANNELS.keys():
                     await new_message.add_reaction(emoji)
@@ -91,12 +96,12 @@ async def handle_reaction(bot, payload):
 
                 # ✅ Fix: Ensure negative adjustment is applied correctly
                 shared_remaining_time = max(0, adjusted_remaining_time + negative_adjustment)
-                shared_remaining_time = min(shared_remaining_time, original_duration)  # Ensure it never exceeds full time
+                shared_remaining_time = min(shared_remaining_time, original_duration)
                 new_end_time = current_time + shared_remaining_time
 
-                print(f"🟢 NEW DEBUG - Sharing with:")
-                print(f"🕒 Shared Remaining Time: {shared_remaining_time} sec ({shared_remaining_time//60}m)")
-                print(f"🕒 Adjusted End Time: <t:{new_end_time}:F>")
+                print(f"🟢 DEBUGGING - Sharing Event with:")
+                print(f"   ⏳ Shared Remaining Time: {shared_remaining_time} sec ({shared_remaining_time//60}m)")
+                print(f"   📌 New End Time: <t:{new_end_time}:F>")
 
                 shared_text = (
                     f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
