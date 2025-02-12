@@ -69,13 +69,13 @@ async def handle_reaction(bot, payload):
 
         new_message = None  # ✅ Ensures no undefined variable issues
 
-        # ✅ Reset Event
+        # ✅ Reset Event (Restores original interval)
         if reaction_emoji == "✅":
             print(f"🔄 Resetting event: {item_name}")
             event_text = generate_event_text(user.display_name, "Reset")
             channel = channel  # ✅ Stay in the same channel
 
-        # ✅ Share Event
+        # ✅ Share Event (Replaces sharing options with claim)
         elif reaction_emoji in config.GATHERING_CHANNELS:
             new_channel_name = config.GATHERING_CHANNELS[reaction_emoji]
             target_channel = discord.utils.get(guild.channels, name=new_channel_name)
@@ -85,7 +85,7 @@ async def handle_reaction(bot, payload):
                 event_text = generate_event_text(user.display_name, "Shared")
                 channel = target_channel  # ✅ Move event to shared channel
 
-        # ✅ Claim Event
+        # ✅ Claim Event (Moves to Personal Channel & Enables Sharing)
         elif reaction_emoji == "📥":
             print(f"📥 Claiming event: {item_name} for {user.display_name}")
 
@@ -123,6 +123,19 @@ async def handle_reaction(bot, payload):
         elif reaction_emoji == "📥":
             for emoji in config.GATHERING_CHANNELS.keys():
                 await new_message.add_reaction(emoji)  # ✅ Allow sharing after claiming
+
+        # ✅ If event is reset (`✅` reaction), set reactions based on channel type
+        elif reaction_emoji == "✅":
+            # ✅ If reset in a shared channel, give `📥` and `🔔`
+            if channel.name in config.GATHERING_CHANNELS.values():
+                await new_message.add_reaction("📥")
+                print(f"📌 Event reset in shared channel, added `📥` and `🔔`.")
+
+            # ✅ If reset in a personal channel, give sharing reactions
+            else:
+                for emoji in config.GATHERING_CHANNELS.keys():
+                    await new_message.add_reaction(emoji)
+                print(f"📌 Event reset in personal channel, added sharing reactions and `🔔`.")
 
         # ✅ Store New Event Data
         bot.messages_to_delete[new_message.id] = (
