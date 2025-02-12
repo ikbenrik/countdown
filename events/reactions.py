@@ -43,8 +43,17 @@ async def handle_reaction(bot, payload):
             )
 
             new_message = await channel.send(reset_text)
-            await new_message.add_reaction("✅")
-            await new_message.add_reaction("🗑️")
+            # ✅ Always add reset and delete reactions
+await new_message.add_reaction("✅")  # Reset event
+await new_message.add_reaction("🗑️")  # Delete event
+
+# ✅ Check if the event is in a shared gathering channel
+if channel.name in config.GATHERING_CHANNELS.values():
+    await new_message.add_reaction("📥")  # Add claim reaction in shared channels
+else:
+    for emoji in config.GATHERING_CHANNELS.keys():
+        await new_message.add_reaction(emoji)  # ✅ Add sharing reactions (⛏️, 🌲, 🌿)
+
 
             bot.messages_to_delete[new_message.id] = (
                 new_message, duration, item_name, rarity_name, color, amount, channel_id, creator_name
