@@ -2,6 +2,15 @@ import discord
 import config
 import time
 import logging
+from ping_manager import track_ping_reaction, remove_ping_reaction
+
+# ✅ Track bell reactions for pings
+if reaction_emoji == "🔔":
+    await track_ping_reaction(bot, payload)
+
+# ✅ Remove user from pings if they remove their reaction
+elif payload.event_type == "REACTION_REMOVE" and reaction_emoji == "🔔":
+    await remove_ping_reaction(bot, payload)
 
 async def handle_reaction(bot, payload):
     logging.debug("🚨 DEBUG: handle_reaction() function was triggered!")  
