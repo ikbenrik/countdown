@@ -91,7 +91,7 @@ async def handle_reaction(bot, payload):
             await message.delete()
             del bot.messages_to_delete[message.id]
 
-        # ✅ Share Event (Must Keep Remaining Time + Negative Adjustment)
+                # ✅ Share Event (Must Keep Remaining Time + Negative Adjustment)
         elif reaction_emoji in config.GATHERING_CHANNELS:
             new_channel_name = config.GATHERING_CHANNELS[reaction_emoji]
             target_channel = discord.utils.get(guild.channels, name=new_channel_name)
@@ -99,26 +99,24 @@ async def handle_reaction(bot, payload):
             if target_channel:
                 print(f"📤 Sharing event: {item_name} to {new_channel_name}")
 
-                # ✅ Fix: Ensure negative adjustment is applied correctly
-                # ✅ Correctly apply negative time when sharing
+                # ✅ Ensure the correct time is applied when sharing
                 if negative_adjustment > 0:
-                # ✅ If a negative adjustment was originally applied, retain it.
-                    shared_remaining_time = max(0, remaining_duration + negative_adjustment)
+                    # If a negative adjustment was originally applied, retain it
+                    shared_remaining_time = max(0, adjusted_remaining_time)  # Use adjusted remaining time
                 else:
-                # ✅ If no negative time was set, just use the actual remaining time.
-                    shared_remaining_time = max(0, remaining_duration)
-                new_end_time = current_time + shared_remaining_time  # Keep remaining time intact
+                    # If no negative time was set, just use the true remaining time
+                    shared_remaining_time = max(0, remaining_duration - (current_time - event_creation_time))
 
+                # ✅ Ensure it never resets to the full interval when sharing
+                shared_remaining_time = min(shared_remaining_time, original_duration)
+                new_end_time = current_time + shared_remaining_time
+
+                # 🟢 Debugging to confirm correct values
                 print(f"🟢 DEBUG - Final Sharing Time:")
                 print(f"   ⏳ Shared Remaining Time: {shared_remaining_time} sec ({shared_remaining_time//60}m)")
                 print(f"   📌 New End Time: <t:{new_end_time}:F>")
 
-                new_end_time = current_time + shared_remaining_time
-
-                print(f"🟢 DEBUGGING - Sharing Event with:")
-                print(f"   ⏳ Shared Remaining Time: {shared_remaining_time} sec ({shared_remaining_time//60}m)")
-                print(f"   📌 New End Time: <t:{new_end_time}:F>")
-
+                # ✅ Prepare the shared message with correct remaining time
                 shared_text = (
                     f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
                     f"👤 **Shared by: {user.display_name}**\n"
@@ -127,13 +125,17 @@ async def handle_reaction(bot, payload):
                     f"⏳ **Interval: {original_duration//60}m**"
                 )
 
+                # ✅ Send the corrected shared message
                 new_message = await target_channel.send(shared_text)
-                await new_message.add_reaction("✅")
-                await new_message.add_reaction("🗑️")
-                await new_message.add_reaction("📥")
+                await new_message.add_reaction("✅")  # Reset
+                await new_message.add_reaction("🗑️")  # Delete
+                await new_message.add_reaction("📥")  # Claim reaction in shared channels
 
+                # ✅ Track new message with the **correct remaining time**
                 bot.messages_to_delete[new_message.id] = (
-                    new_message, original_duration, shared_remaining_time, negative_adjustment, item_name, rarity_name, color, amount, target_channel.id, creator_name
+                    new_message, original_duration, shared_remaining_time, negative_adjustment, 
+                    item_name, rarity_name, color, amount, target_channel.id, creator_name
                 )
 
+                # ✅ Delete the original message after sharing
                 await message.delete()
