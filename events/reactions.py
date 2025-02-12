@@ -97,9 +97,11 @@ async def handle_reaction(bot, payload):
         await new_message.add_reaction("📥")  # Claim reaction for shared channels
 
         # ✅ Track new message with the **remaining time**
+        # ✅ CORRECT: Store the remaining time instead of resetting to full interval
         bot.messages_to_delete[new_message.id] = (
             new_message, remaining_time, item_name, rarity_name, color, amount, target_channel.id, creator_name
         )
+
 
 
         # ✅ Delete the original message after sharing
