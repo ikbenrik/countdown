@@ -29,12 +29,12 @@ async def handle_reaction(bot, payload):
     reaction_emoji = str(payload.emoji)
     print(f"🔍 Reaction detected: {reaction_emoji} by {user.display_name}")
 
-# ✅ Handle Bell reaction (Ping system)
-if reaction_emoji == "🔔":
-    if payload.event_type == "REACTION_ADD":
-        await track_ping_reaction(bot, payload)
-    elif payload.event_type == "REACTION_REMOVE":
-        await remove_ping_reaction(bot, payload)
+    # ✅ Handle Bell reaction (Ping system)
+    if reaction_emoji == "🔔":
+        if payload.event_type == "REACTION_ADD":
+            await track_ping_reaction(bot, payload)
+        elif payload.event_type == "REACTION_REMOVE":
+            await remove_ping_reaction(bot, payload)
     return  # ✅ Stop further processing, don't send a new event message
 
     # ✅ Auto-delete bot messages when clicking 🗑️
