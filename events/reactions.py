@@ -98,7 +98,7 @@ async def handle_reaction(bot, payload):
                 event_text = generate_event_text(user.display_name, "Shared")
                 channel = target_channel  # ✅ Set channel to new location
 
-        # ✅ Claim Event (Moves to Personal Channel)
+        # ✅ Claim Event (Moves to Personal Channel & Re-enables Sharing)
         elif reaction_emoji == "📥":
             print(f"📥 Claiming event: {item_name} for {user.display_name}")
 
@@ -132,15 +132,17 @@ async def handle_reaction(bot, payload):
         # ✅ Add Reactions
         await new_message.add_reaction("✅")
         await new_message.add_reaction("🗑️")
-        await new_message.add_reaction("📥")  # ✅ Always allow claiming
         await new_message.add_reaction("🔔")  # ✅ Bell reaction for pings
         
-        # ✅ If event is shared, REMOVE sharing reactions (⛏️, 🌲, 🌿, etc.)
+        # ✅ If event is shared, REMOVE sharing reactions (⛏️, 🌲, 🌿, etc.), only allow claim
         if reaction_emoji in config.GATHERING_CHANNELS:
-            print(f"📌 Event moved to a shared channel, replacing share options with claim (`📥`).")
-        else:
+            await new_message.add_reaction("📥")  # ✅ Only claim after sharing
+            print(f"📌 Event moved to a shared channel, replaced share options with claim (`📥`).")
+
+        # ✅ If event is claimed, REMOVE claim (`📥`) and ADD sharing options
+        elif reaction_emoji == "📥":
             for emoji in config.GATHERING_CHANNELS.keys():
-                await new_message.add_reaction(emoji)
+                await new_message.add_reaction(emoji)  # ✅ Allow sharing after claiming
 
         # ✅ Store New Event Data
         bot.messages_to_delete[new_message.id] = (
