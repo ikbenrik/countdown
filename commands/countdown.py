@@ -55,4 +55,26 @@ async def cd(bot, ctx, *args):
         if item_name in item_timers:
             duration = item_timers[item_name]
         else:
- 
+            await ctx.send(f"❌ **{item_name.capitalize()}** is not stored! Use `!cd {item_name} <time>` first.")
+            return
+
+    countdown_time = int(time.time()) + duration  
+
+    countdown_text = (
+        f"{color} **{amount}x {rarity_name} {item_name.capitalize()}** {color}\n"
+        f"👤 **Posted by: {ctx.author.display_name}**\n"
+        f"⏳ **Next spawn at** <t:{countdown_time}:F>\n"
+        f"⏳ **Countdown:** <t:{countdown_time}:R>"
+    )
+
+    countdown_message = await ctx.send(countdown_text)
+
+    await countdown_message.add_reaction("✅")
+    await countdown_message.add_reaction("🗑️")
+
+    for emoji in GATHERING_CHANNELS.keys():
+        await countdown_message.add_reaction(emoji)
+
+    bot.messages_to_delete[countdown_message.id] = (
+        countdown_message, duration, item_name.capitalize(), rarity_name, color, amount, ctx.channel.id, ctx.author.display_name
+    )
