@@ -36,38 +36,29 @@ async def handle_reaction(bot, payload):
             print(f"⚠️ Warning: Message {payload.message_id} already processed. Skipping.")
             return
 
-        message, duration, item_name, rarity_name, color, amount, channel_id, creator_name, attachments = message_data
+        message, duration, item_name, rarity_name, color, amount, channel_id, creator_name = message_data
 
         if reaction_emoji == "✅":
             print(f"🔄 Resetting event: {item_name}")
-
-            # ✅ Create a new event message
             new_message = await channel.send(message.content)
 
-            # ✅ Re-add reactions
             await new_message.add_reaction("✅")
             await new_message.add_reaction("🗑️")
 
-            # ✅ Track the new message before deleting old one
             bot.messages_to_delete[new_message.id] = (
-                new_message, duration, item_name, rarity_name, color, amount, channel_id, creator_name, attachments
+                new_message, duration, item_name, rarity_name, color, amount, channel_id, creator_name
             )
 
             try:
                 await message.delete()
-                print(f"✅ Old message {payload.message_id} deleted successfully.")
                 del bot.messages_to_delete[payload.message_id]
             except discord.NotFound:
                 print(f"⚠️ Warning: Old message {payload.message_id} already deleted.")
 
         elif reaction_emoji == "🗑️":
             print(f"🗑️ Deleting event: {item_name}")
-
-            if payload.message_id in bot.messages_to_delete:
-                del bot.messages_to_delete[payload.message_id]
-
             try:
                 await message.delete()
-                print(f"✅ Message {payload.message_id} deleted successfully.")
+                del bot.messages_to_delete[payload.message_id]
             except discord.NotFound:
                 print(f"⚠️ Warning: Message {payload.message_id} was already deleted.")
