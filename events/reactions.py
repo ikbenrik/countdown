@@ -3,7 +3,7 @@ import config
 import time
 
 async def handle_reaction(bot, payload):
-    print("🔎 DEBUG: handle_reaction() was triggered!")  # Debugging
+    print("🔎 DEBUG: handle_reaction() was triggered!")  
 
     if payload.user_id == bot.user.id:
         return  
@@ -30,24 +30,25 @@ async def handle_reaction(bot, payload):
         if len(message_data) == 8:  # Old format detected
             print("⚠️ WARNING: Old format detected. Fixing now.")
             message, original_duration, item_name, rarity_name, color, amount, channel_id, creator_name = message_data
-            remaining_duration = original_duration  # Default to full duration
+            remaining_duration = original_duration
+            negative_adjustment = 0  # Assume no negative time for old events
         else:
-            message, original_duration, remaining_duration, item_name, rarity_name, color, amount, channel_id, creator_name = message_data
+            message, original_duration, remaining_duration, negative_adjustment, item_name, rarity_name, color, amount, channel_id, creator_name = message_data
 
-        # ✅ Debugging prints to verify time calculations
         current_time = int(time.time())
         event_creation_time = int(message.created_at.timestamp())
-        remaining_time = max(0, remaining_duration - (current_time - event_creation_time))
+        adjusted_remaining_time = max(0, remaining_duration - (current_time - event_creation_time))
 
         print(f"DEBUG: Current Time: {current_time}")
         print(f"DEBUG: Event Created At: {event_creation_time}")
-        print(f"DEBUG: Remaining Time: {remaining_time} seconds ({remaining_time//60}m)")
+        print(f"DEBUG: Remaining Time: {adjusted_remaining_time} seconds ({adjusted_remaining_time//60}m)")
         print(f"DEBUG: Original Duration: {original_duration} seconds ({original_duration//60}m)")
+        print(f"DEBUG: Negative Adjustment: {negative_adjustment} seconds ({negative_adjustment//60}m)")
 
         # ✅ Reset Event (ALWAYS restores original interval)
         if reaction_emoji == "✅":
             print(f"🔄 Resetting event: {item_name}")
-            new_end_time = current_time + original_duration
+            new_end_time = current_time + original_duration  # Reset to full duration, ignoring negative adjustments
 
             reset_text = (
                 f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
@@ -68,7 +69,7 @@ async def handle_reaction(bot, payload):
                     await new_message.add_reaction(emoji)
 
             bot.messages_to_delete[new_message.id] = (
-                new_message, original_duration, original_duration, item_name, rarity_name, color, amount, channel_id, creator_name
+                new_message, original_duration, original_duration, 0, item_name, rarity_name, color, amount, channel_id, creator_name
             )
             await message.delete()
 
@@ -87,8 +88,9 @@ async def handle_reaction(bot, payload):
                 print(f"📤 Sharing event: {item_name} to {new_channel_name}")
 
                 # ✅ Fix: Ensure **negative time adjustments are preserved**
-                adjusted_remaining_time = min(remaining_time, original_duration)  # Ensure it never exceeds full time
-                new_end_time = current_time + adjusted_remaining_time  # ✅ Keeps remaining time
+                shared_remaining_time = max(0, adjusted_remaining_time + negative_adjustment)
+                shared_remaining_time = min(shared_remaining_time, original_duration)  # Ensure it never exceeds full time
+                new_end_time = current_time + shared_remaining_time  # ✅ Keeps remaining time
 
                 shared_text = (
                     f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
@@ -105,7 +107,7 @@ async def handle_reaction(bot, payload):
 
                 # ✅ Fix: Store the correctly adjusted remaining time
                 bot.messages_to_delete[new_message.id] = (
-                    new_message, original_duration, adjusted_remaining_time, item_name, rarity_name, color, amount, target_channel.id, creator_name
+                    new_message, original_duration, shared_remaining_time, negative_adjustment, item_name, rarity_name, color, amount, target_channel.id, creator_name
                 )
 
                 await message.delete()
