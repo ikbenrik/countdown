@@ -31,7 +31,7 @@ async def handle_reaction(bot, payload):
 
     # ✅ Handle Bell reaction (Ping system)
     if reaction_emoji == "🔔":
-        await track_ping_reaction(bot, payload, message.jump_url)  # ✅ Store the event link for pings
+        await track_ping_reaction(bot, payload, message.jump_url)  # ✅ Store event link for pings
 
     # ✅ Remove user from pings if they remove 🔔 reaction
     if payload.event_type == "REACTION_REMOVE" and reaction_emoji == "🔔":
@@ -99,6 +99,42 @@ async def handle_reaction(bot, payload):
             )
             await message.delete()
 
+        # ✅ Share Event (Maintains Timer & Ensures Bell Reaction)
+        elif reaction_emoji in config.GATHERING_CHANNELS:
+            new_channel_name = config.GATHERING_CHANNELS[reaction_emoji]
+            target_channel = discord.utils.get(guild.channels, name=new_channel_name)
+
+            if target_channel:
+                print(f"📤 Sharing event: {item_name} to {new_channel_name}")
+
+                shared_remaining_time = min(adjusted_remaining_time, original_duration)
+                new_end_time = current_time + shared_remaining_time
+
+                shared_text = (
+                    f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
+                    f"👤 **Shared by: {user.display_name}**\n"
+                    f"⏳ **Next spawn at** <t:{new_end_time}:F>\n"
+                    f"⏳ **Countdown:** <t:{new_end_time}:R>\n"
+                    f"⏳ **Interval: {original_duration//60}m**"
+                )
+
+                embed = discord.Embed()
+                if image_url:
+                    embed.set_image(url=image_url)
+
+                new_message = await target_channel.send(shared_text, embed=embed if image_url else None)
+
+                await new_message.add_reaction("✅")
+                await new_message.add_reaction("🗑️")
+                await new_message.add_reaction("📥")
+                await new_message.add_reaction("🔔")  # ✅ Bell reaction for pings
+
+                bot.messages_to_delete[new_message.id] = (
+                    new_message, original_duration, shared_remaining_time, negative_adjustment, 
+                    item_name, rarity_name, color, amount, target_channel.id, creator_name, image_url
+                )
+                await message.delete()
+
         # ✅ Claim Event (Move to Personal Channel)
         elif reaction_emoji == "📥":
             print(f"📥 Claiming event: {item_name} for {user.display_name}")
@@ -116,22 +152,7 @@ async def handle_reaction(bot, payload):
                 print(f"📌 Creating personal channel for {user.display_name}")
                 user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
 
-            claimed_remaining_time = max(0, adjusted_remaining_time)
-            new_end_time = current_time + claimed_remaining_time
-
-            claimed_text = (
-                f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
-                f"👤 **Claimed by: {user.display_name}**\n"
-                f"⏳ **Next spawn at** <t:{new_end_time}:F>\n"
-                f"⏳ **Countdown:** <t:{new_end_time}:R>\n"
-                f"⏳ **Interval: {original_duration//60}m**"
-            )
-
-            embed = discord.Embed()
-            if image_url:
-                embed.set_image(url=image_url)
-
-            new_message = await user_channel.send(claimed_text, embed=embed if image_url else None)
+            new_message = await user_channel.send(shared_text, embed=embed if image_url else None)
 
             await new_message.add_reaction("✅")
             await new_message.add_reaction("🗑️")
@@ -139,10 +160,4 @@ async def handle_reaction(bot, payload):
             for emoji in config.GATHERING_CHANNELS.keys():
                 await new_message.add_reaction(emoji)
 
-            bot.messages_to_delete[new_message.id] = (
-                new_message, original_duration, claimed_remaining_time, negative_adjustment, item_name, rarity_name, color, amount, user_channel.id, user.display_name, image_url
-            )
-
             await message.delete()
-            print(f"✅ Successfully moved {item_name} to {user.display_name}'s personal channel!")
-
