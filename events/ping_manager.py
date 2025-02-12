@@ -66,7 +66,8 @@ async def schedule_pings(bot):
                     channel = bot.get_channel(channel_id)
                     if channel:
                         mentions = " ".join([f"<@{user_id}>" for user_id in users])
-                        await channel.send(f"🔔 **Reminder!** {item_name} event ends in **15 minutes!** {mentions}")
+                        event_link = f"[Click here]({message.jump_url})"  # ✅ Include event link in the ping
+                        await channel.send(f"🔔 **Reminder!** {item_name} event ends in **15 minutes!** {mentions} {event_link}")
 
                     to_remove.append(message_id)  # ✅ Remove event after ping is sent
 
