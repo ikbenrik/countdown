@@ -24,7 +24,7 @@ def load_items():
 # ✅ Load saved items on startup
 item_timers = load_items()
 
-async def cd(ctx, *args):
+async def cd(bot, ctx, *args):
     """Handles tracking events with the new command structure."""
     global item_timers
 
