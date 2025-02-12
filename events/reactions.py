@@ -61,11 +61,21 @@ async def handle_reaction(bot, payload):
             f"⏳ **Interval: {original_duration//60}m**"
         )
 
+    reset_reactions = []  # ✅ Define which reactions will be added back after reset/share/claim
+
     # ✅ Reset Event (Restores original interval)
     if reaction_emoji == "✅":
         await delete_pings_for_event(message.id)  # ✅ Remove pings on reset
         event_text = generate_event_text(user.display_name, "Reset")
         channel = channel  
+
+        # ✅ Ensure correct reactions after reset
+        if channel.name in config.GATHERING_CHANNELS.values():
+            reset_reactions = ["📥", "🔔"]  # ✅ Shared channels should get claim & bell
+            logging.info(f"📌 Event reset in shared channel, adding `📥` and `🔔`.")
+        else:
+            reset_reactions = list(config.GATHERING_CHANNELS.keys()) + ["🔔"]  # ✅ Personal channels get sharing & bell
+            logging.info(f"📌 Event reset in personal channel, adding sharing options and `🔔`.")
 
     # ✅ Share Event (Replaces sharing options with claim)
     elif reaction_emoji in config.GATHERING_CHANNELS:
@@ -75,6 +85,8 @@ async def handle_reaction(bot, payload):
         if target_channel:
             event_text = generate_event_text(user.display_name, "Shared")
             channel = target_channel  
+            reset_reactions = ["📥"]  # ✅ After sharing, only claim should be available
+            logging.info(f"📌 Event moved to `{new_channel_name}`, replaced share options with `📥`.")
 
     # ✅ Claim Event (Moves to Personal Channel & Enables Sharing)
     elif reaction_emoji == "📥":
@@ -91,6 +103,8 @@ async def handle_reaction(bot, payload):
 
         event_text = generate_event_text(user.display_name, "Claimed")
         channel = user_channel  
+        reset_reactions = list(config.GATHERING_CHANNELS.keys())  # ✅ After claiming, sharing should be available
+        logging.info(f"📌 Event claimed, replaced `📥` with sharing reactions.")
 
     embed = discord.Embed()
     if image_url:
@@ -103,15 +117,9 @@ async def handle_reaction(bot, payload):
     await new_message.add_reaction("🗑️")
     await new_message.add_reaction("🔔")
 
-    # ✅ If event is shared, REMOVE sharing reactions, only allow claim
-    if reaction_emoji in config.GATHERING_CHANNELS:
-        await new_message.add_reaction("📥")  
-        logging.info(f"📌 Event moved to a shared channel, replaced share options with claim (`📥`).")
-
-    # ✅ If event is claimed, REMOVE claim (`📥`) and ADD sharing options
-    elif reaction_emoji == "📥":
-        for emoji in config.GATHERING_CHANNELS.keys():
-            await new_message.add_reaction(emoji)  
+    # ✅ Apply correct post-reset reactions
+    for emoji in reset_reactions:
+        await new_message.add_reaction(emoji)
 
     # ✅ Store Updated Event Data
     bot.messages_to_delete[new_message.id] = (
