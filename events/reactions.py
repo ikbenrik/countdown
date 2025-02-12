@@ -42,7 +42,7 @@ async def handle_reaction(bot, payload):
         # ✅ Reset Event
         if reaction_emoji == "✅":
             print(f"🔄 Resetting event: {item_name}")
-            new_end_time = current_time + original_duration  # Full reset to original time
+            new_end_time = current_time + original_duration
             reset_text = (
                 f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
                 f"👤 **Reset by: {user.display_name}**\n"
