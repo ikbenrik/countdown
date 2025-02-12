@@ -4,7 +4,7 @@ import config
 from commands.countdown import cd
 from events.reactions import handle_reaction
 from commands.items import add_item, remove_item, list_items  # ✅ Import all item commands
-from ping_manager import schedule_pings
+from events.ping_manager import schedule_pings
 import asyncio
 import logging
 
