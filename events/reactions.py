@@ -2,7 +2,7 @@ import discord
 import config
 import time
 import logging
-from events.ping_manager import track_ping_reaction, remove_ping_reaction
+from events.ping_manager import track_ping_reaction, remove_ping_reaction  # ✅ Import ping management
 
 async def handle_reaction(bot, payload):
     logging.debug("🚨 DEBUG: handle_reaction() function was triggered!")  
@@ -31,11 +31,9 @@ async def handle_reaction(bot, payload):
 
     # ✅ Handle Bell reaction (Ping system)
     if reaction_emoji == "🔔":
-        await track_ping_reaction(bot, payload)
-
-    # ✅ Remove user from pings if they remove 🔔 reaction
-    elif isinstance(payload, discord.RawReactionActionEvent) and payload.event_type == "REACTION_REMOVE":
-        if reaction_emoji == "🔔":
+        if payload.event_type == "REACTION_ADD":
+            await track_ping_reaction(bot, payload)
+        elif payload.event_type == "REACTION_REMOVE":
             await remove_ping_reaction(bot, payload)
 
     # ✅ Auto-delete bot messages when clicking 🗑️
@@ -64,16 +62,18 @@ async def handle_reaction(bot, payload):
             return (
                 f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
                 f"👤 **{action} by: {actor}**\n"
-                f"⏳ **Next spawn at** <t:{new_end_time}:F>\n"
-                f"⏳ **Countdown:** <t:{new_end_time}:R>\n"
+                f"⏳ **Next spawn at** <t:{current_time + adjusted_remaining_time}:F>\n"
+                f"⏳ **Countdown:** <t:{current_time + adjusted_remaining_time}:R>\n"
                 f"⏳ **Interval: {original_duration//60}m**"
             )
+
+        new_message = None  # ✅ Ensures no undefined variable issues
 
         # ✅ Reset Event
         if reaction_emoji == "✅":
             print(f"🔄 Resetting event: {item_name}")
-            new_end_time = current_time + original_duration
             event_text = generate_event_text(user.display_name, "Reset")
+            channel = channel  # ✅ Stay in the same channel
 
         # ✅ Share Event
         elif reaction_emoji in config.GATHERING_CHANNELS:
@@ -82,9 +82,8 @@ async def handle_reaction(bot, payload):
 
             if target_channel:
                 print(f"📤 Sharing event: {item_name} to {new_channel_name}")
-                new_end_time = current_time + adjusted_remaining_time
                 event_text = generate_event_text(user.display_name, "Shared")
-                channel = target_channel
+                channel = target_channel  # ✅ Move event to shared channel
 
         # ✅ Claim Event
         elif reaction_emoji == "📥":
@@ -101,17 +100,34 @@ async def handle_reaction(bot, payload):
             if not user_channel:
                 user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
 
-            new_end_time = current_time + adjusted_remaining_time
             event_text = generate_event_text(user.display_name, "Claimed")
-            channel = user_channel
+            channel = user_channel  # ✅ Move to personal channel
 
         embed = discord.Embed()
         if image_url:
             embed.set_image(url=image_url)
 
         new_message = await channel.send(event_text, embed=embed if image_url else None)
+
+        # ✅ Always add Reset, Delete, and Bell Reactions
         await new_message.add_reaction("✅")
         await new_message.add_reaction("🗑️")
         await new_message.add_reaction("🔔")
 
-        await message.delete()
+        # ✅ If event is shared, REMOVE sharing reactions (⛏️, 🌲, 🌿, etc.), only allow claim
+        if reaction_emoji in config.GATHERING_CHANNELS:
+            await new_message.add_reaction("📥")  # ✅ Only claim after sharing
+            print(f"📌 Event moved to a shared channel, replaced share options with claim (`📥`).")
+
+        # ✅ If event is claimed, REMOVE claim (`📥`) and ADD sharing options
+        elif reaction_emoji == "📥":
+            for emoji in config.GATHERING_CHANNELS.keys():
+                await new_message.add_reaction(emoji)  # ✅ Allow sharing after claiming
+
+        # ✅ Store New Event Data
+        bot.messages_to_delete[new_message.id] = (
+            new_message, original_duration, adjusted_remaining_time, negative_adjustment,
+            item_name, rarity_name, color, amount, new_message.channel.id, creator_name, image_url
+        )
+
+        await message.delete()  # ✅ Remove old message
