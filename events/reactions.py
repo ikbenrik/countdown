@@ -34,7 +34,7 @@ async def handle_reaction(bot, payload):
         await track_ping_reaction(bot, payload)  # ✅ Store event link for pings
 
     # ✅ Remove user from pings if they remove 🔔 reaction
-    if payload.event_type == "REACTION_REMOVE" and reaction_emoji == "🔔":
+    if hasattr(payload, 'event_type') and payload.event_type == "REACTION_REMOVE" and reaction_emoji == "🔔":
         await remove_ping_reaction(bot, payload)
 
     # ✅ Auto-delete bot messages when clicking 🗑️
@@ -152,7 +152,8 @@ async def handle_reaction(bot, payload):
                 print(f"📌 Creating personal channel for {user.display_name}")
                 user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
 
-            event_text = shared_text if 'shared_text' in locals() else reset_text  # ✅ Ensure one is always defined
+            # ✅ Ensure a valid message text exists before sending
+            event_text = locals().get("shared_text", locals().get("reset_text", "Unknown event data."))
 
             new_message = await user_channel.send(event_text, embed=embed if image_url else None)
 
