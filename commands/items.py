@@ -49,7 +49,14 @@ async def add_item(ctx, item_name: str, duration_str: str):
 
     hours = duration // 3600
     minutes = (duration % 3600) // 60
-    duration_text = f"{hours}h {minutes}m" if hours > 0 else f"{minutes}m"
+
+    # ✅ Only show minutes if nonzero
+    if hours > 0 and minutes > 0:
+        duration_text = f"{hours}h {minutes}m"
+    elif hours > 0:
+        duration_text = f"{hours}h"
+    else:
+        duration_text = f"{minutes}m"
 
     logging.info(f"✅ Added item: {item_name} with duration {duration_text}")
     response = await ctx.send(f"✅ **Added:** {item_name.capitalize()} - {duration_text}")
@@ -89,7 +96,15 @@ async def list_items(ctx):
     for item, seconds in item_timers.items():
         hours = seconds // 3600
         minutes = (seconds % 3600) // 60
-        duration_str = f"{hours}h {minutes}m" if hours > 0 else f"{minutes}m"
+
+        # ✅ Only show minutes if nonzero
+        if hours > 0 and minutes > 0:
+            duration_str = f"{hours}h {minutes}m"
+        elif hours > 0:
+            duration_str = f"{hours}h"
+        else:
+            duration_str = f"{minutes}m"
+
         formatted_items.append(f"🔹 **{item.capitalize()}** - {duration_str}")
 
     item_list_message = "📜 **Stored Items:**\n" + "\n".join(formatted_items)
