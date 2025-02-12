@@ -43,6 +43,7 @@ async def handle_reaction(bot, payload):
             print("⚠️ WARNING: Old format detected. Fixing now.")
             message, original_duration, remaining_duration, item_name, rarity_name, color, amount, channel_id, creator_name = message_data
             negative_adjustment = 0  # Assume no negative time for old events
+            image_url = None  # Older events don't store images
         else:
             message, original_duration, remaining_duration, negative_adjustment, item_name, rarity_name, color, amount, channel_id, creator_name, image_url = message_data
 
@@ -56,7 +57,7 @@ async def handle_reaction(bot, payload):
         print(f"   📌 Event Created At: {event_creation_time}")
         print(f"   ⏳ Remaining Time: {adjusted_remaining_time} sec ({adjusted_remaining_time//60}m)")
         print(f"   ⏳ Original Duration: {original_duration} sec ({original_duration//60}m)")
-        print(f"   🛑 Negative Adjustment (Should be Non-Zero if Set): {negative_adjustment} sec ({negative_adjustment//60}m)")
+        print(f"   🛑 Negative Adjustment: {negative_adjustment} sec ({negative_adjustment//60}m)")
 
         # ✅ Reset Event (Always restores original interval)
         if reaction_emoji == "✅":
@@ -71,7 +72,15 @@ async def handle_reaction(bot, payload):
                 f"⏳ **Interval: {original_duration//60}m**"
             )
 
-            new_message = await channel.send(reset_text)
+            embed = discord.Embed()
+            if image_url:
+                embed.set_image(url=image_url)
+
+            if image_url:
+                new_message = await channel.send(reset_text, embed=embed)
+            else:
+                new_message = await channel.send(reset_text)
+
             await new_message.add_reaction("✅")
             await new_message.add_reaction("🗑️")
 
@@ -82,7 +91,7 @@ async def handle_reaction(bot, payload):
                     await new_message.add_reaction(emoji)
 
             bot.messages_to_delete[new_message.id] = (
-                new_message, original_duration, original_duration, 0, item_name, rarity_name, color, amount, channel_id, creator_name
+                new_message, original_duration, original_duration, 0, item_name, rarity_name, color, amount, channel_id, creator_name, image_url
             )
             await message.delete()
 
@@ -118,10 +127,9 @@ async def handle_reaction(bot, payload):
                 )
 
                 embed = discord.Embed()
-                if image_url:  # ✅ If an image was originally included, add it
+                if image_url:
                     embed.set_image(url=image_url)
 
-                # ✅ Send message with or without an image
                 if image_url:
                     new_message = await target_channel.send(shared_text, embed=embed)
                 else:
@@ -135,5 +143,45 @@ async def handle_reaction(bot, payload):
                     new_message, original_duration, shared_remaining_time, negative_adjustment, 
                     item_name, rarity_name, color, amount, target_channel.id, creator_name, image_url
                 )
-
                 await message.delete()
+
+        # ✅ Claim Event (Move to User’s Personal Channel)
+        elif reaction_emoji == "📥":
+            print(f"📥 Claiming event: {item_name} for {user.display_name}")
+
+            user_channel_name = user.display_name.lower().replace(" ", "-")
+            personal_category = next((cat for cat in guild.categories if cat.name.lower() == "personal intel"), None)
+
+            if not personal_category:
+                print(f"❌ ERROR: 'PERSONAL INTEL' category not found!")
+                return
+
+            user_channel = discord.utils.get(guild.text_channels, name=user_channel_name, category=personal_category)
+
+            if not user_channel:
+                print(f"📌 Creating personal channel for {user.display_name}")
+                user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
+
+            claimed_remaining_time = max(0, adjusted_remaining_time)
+            new_end_time = current_time + claimed_remaining_time
+
+            claimed_text = (
+                f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
+                f"👤 **Claimed by: {user.display_name}**\n"
+                f"⏳ **Next spawn at** <t:{new_end_time}:F>\n"
+                f"⏳ **Countdown:** <t:{new_end_time}:R>\n"
+                f"⏳ **Interval: {original_duration//60}m**"
+            )
+
+            embed = discord.Embed()
+            if image_url:
+                embed.set_image(url=image_url)
+
+            new_message = await user_channel.send(claimed_text, embed=embed if image_url else None)
+
+            await new_message.add_reaction("✅")
+            await new_message.add_reaction("🗑️")
+
+            bot.messages_to_delete[new_message.id] = (new_message, original_duration, claimed_remaining_time, negative_adjustment, item_name, rarity_name, color, amount, user_channel.id, user.display_name, image_url)
+
+            await message.delete()
