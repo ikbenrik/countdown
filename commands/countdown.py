@@ -7,7 +7,8 @@ from utils.helpers import load_items
 item_timers = load_items()
 
 async def cd(bot, ctx, *args):
-    """Handles event creation and tracking with optional negative time."""
+    """Handles event creation and tracking with optional images and negative time adjustments."""
+    
     if len(args) < 1:
         await ctx.send("❌ **Invalid format!** Use `!cd <item> [rarity/amount] [time] [-X minutes]`.")
         return
@@ -49,15 +50,27 @@ async def cd(bot, ctx, *args):
     original_duration = duration  # ✅ Store original full duration for resets
     countdown_time = int(time.time()) + max(0, duration - negative_offset)  # ✅ Adjust time
 
+    # ✅ Capture image attachment if provided
+    image_url = None
+    if ctx.message.attachments:
+        image_url = ctx.message.attachments[0].url  # Take the first attached image
+
     countdown_text = (
         f"{color} **{amount}x {rarity_name} {item_name.capitalize()}** {color}\n"
         f"👤 **Posted by: {ctx.author.display_name}**\n"
         f"⏳ **Next spawn at** <t:{countdown_time}:F>\n"
         f"⏳ **Countdown:** <t:{countdown_time}:R>\n"
-        f"⏳ **Interval: {original_duration//60}m**"
+        f"⏳ **Interval:** {original_duration // 3600}h"
     )
+    
+    if original_duration % 3600 != 0:
+        countdown_text += f" {original_duration % 3600 // 60}m"
 
-    message = await ctx.send(countdown_text)
+    # ✅ Send message with image (if exists)
+    if image_url:
+        message = await ctx.send(countdown_text, embed=discord.Embed().set_image(url=image_url))
+    else:
+        message = await ctx.send(countdown_text)
 
     # ✅ Always add reset and delete reactions
     await message.add_reaction("✅")  # Reset event
@@ -70,9 +83,8 @@ async def cd(bot, ctx, *args):
         for emoji in config.GATHERING_CHANNELS.keys():
             await message.add_reaction(emoji)  # ✅ Add sharing reactions (⛏️, 🌲, 🌿)
 
-    # ✅ Store message details, including the original duration
+    # ✅ Store message details, including the original duration and image URL
     bot.messages_to_delete[message.id] = (
         message, original_duration, duration - negative_offset, negative_offset,  # ✅ Store the negative offset
-        item_name.capitalize(), rarity_name, color, amount, ctx.channel.id, ctx.author.display_name
-)
-
+        item_name.capitalize(), rarity_name, color, amount, ctx.channel.id, ctx.author.display_name, image_url
+    )
