@@ -59,7 +59,7 @@ async def add_boss(ctx, dungeon: str, boss_name: str = None, time: str = None):
         try:
             reaction, _ = await ctx.bot.wait_for("reaction_add", timeout=30.0, check=check)
             if str(reaction.emoji) == "👍":
-                bosses_data[dungeon][boss_name] = duration
+                bosses_data[dungeon][boss_name] = duration  # ✅ Store duration in **seconds** (Fix)
                 save_bosses(bosses_data)
                 await ctx.send(f"✅ **Updated `{boss_name.capitalize()}` timer to {format_duration(duration)}!**")
             else:
@@ -69,7 +69,7 @@ async def add_boss(ctx, dungeon: str, boss_name: str = None, time: str = None):
             await ctx.send("⌛ **Boss overwrite request timed out.**")
             return
 
-    # ✅ Store the boss inside the dungeon
+    # ✅ Store the boss inside the dungeon (Duration in **seconds**)
     bosses_data[dungeon][boss_name] = duration
     save_bosses(bosses_data)
 
@@ -88,8 +88,8 @@ async def get_bosses(ctx, dungeon: str):
         return
 
     boss_list = "\n".join(
-        f"🔴 **{boss.capitalize()}** - {format_duration(int(time))}"  # ✅ Convert `time` to int before passing
-        for boss, time in bosses_data[dungeon].items()
+        f"🔴 **{boss.capitalize()}** - {format_duration(bosses_data[dungeon][boss])}"  # ✅ No need for int(), stored as seconds
+        for boss in bosses_data[dungeon]
     )
     await ctx.send(f"🏰 **{dungeon.capitalize()} Bosses:**\n{boss_list}")
 
@@ -105,8 +105,8 @@ async def list_all_bosses(ctx):
     
     for dungeon, bosses in bosses_data.items():
         boss_entries = "\n".join(
-            f"  🔴 **{boss.capitalize()}** - {format_duration(int(time))}"  # ✅ Convert `time` to int before passing
-            for boss, time in bosses.items()
+            f"  🔴 **{boss.capitalize()}** - {format_duration(bosses_data[dungeon][boss])}"  # ✅ No need for int(), stored as seconds
+            for boss in bosses
         ) if bosses else "  ❌ No bosses added yet!"
         
         dungeon_list.append(f"🏰 **{dungeon.capitalize()}**\n{boss_entries}")
@@ -138,10 +138,13 @@ def parse_duration(time_str):
     except ValueError:
         return None
 
-    return total_seconds if total_seconds > 0 else None
+    return total_seconds if total_seconds > 0 else None  # ✅ Ensure valid seconds only
 
 def format_duration(seconds):
     """Converts seconds to hours and minutes (e.g., 3600 → '1h', 5400 → '1h 30m')"""
+    if not isinstance(seconds, int):  # ✅ Ensure we only process numbers
+        return "Unknown duration"
+
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
 
