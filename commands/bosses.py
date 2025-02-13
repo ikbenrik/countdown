@@ -1,8 +1,7 @@
-import discord
-import time
 import logging
 import json
 import os
+import discord
 from discord.ext import commands
 
 BOSSES_FILE = "bosses.json"
@@ -23,115 +22,123 @@ def save_bosses(data):
     with open(BOSSES_FILE, "w") as file:
         json.dump(data, file, indent=4)
 
-# ✅ Initialize bosses storage
-boss_timers = load_bosses()
+# ✅ Initialize boss storage
+bosses_data = load_bosses()
 
-# ✅ Convert time format (h, m, s) to seconds
-def parse_duration(duration_str):
-    duration_mapping = {"h": 3600, "m": 60, "s": 1}
-    total_seconds = 0
-
-    try:
-        for part in duration_str.split():
-            unit = part[-1].lower()
-            if unit in duration_mapping and part[:-1].isdigit():
-                total_seconds += int(part[:-1]) * duration_mapping[unit]
-            else:
-                return None  # ❌ Invalid format
-        return total_seconds
-    except ValueError:
-        return None  # ❌ Invalid format
-
-# ✅ Command to add dungeons and bosses
-async def add_boss(ctx, dungeon: str, boss: str, time_str: str):
-    """Adds a boss to a dungeon with a specific timer."""
-    dungeon = dungeon.lower().strip()  # ✅ Normalize dungeon name
-    boss = boss.lower().strip()  # ✅ Normalize boss name
-
-    bosses_data = load_bosses()  # ✅ Load latest bosses
+async def add_boss(ctx, dungeon: str, boss_name: str = None, time: str = None):
+    """Adds a dungeon or a boss with a timer inside a dungeon."""
+    dungeon = dungeon.lower().strip()
 
     if dungeon not in bosses_data:
-        await ctx.send(f"❌ **Dungeon {dungeon.capitalize()} does not exist!** Use `!b add {dungeon}` first.")
+        bosses_data[dungeon] = {}  # ✅ Create dungeon if it doesn't exist
+        save_bosses(bosses_data)
+        await ctx.send(f"🏰 **Added Dungeon:** `{dungeon.capitalize()}`")
         return
 
-    # ✅ Convert time to seconds
-    duration = parse_duration(time_str)
+    if not boss_name or not time:
+        await ctx.send("❌ **You must specify both a boss name and a time!** Use `!b add <dungeon> <boss> <time>`.")
+        return
+
+    boss_name = boss_name.lower().strip()
+
+    # ✅ Convert time format (Supports `h/m/s`)
+    duration = parse_duration(time)
     if duration is None:
         await ctx.send("❌ **Invalid time format!** Use `h/m/s` (e.g., `1h 30m`, `3000s`).")
         return
 
-    # ✅ If boss exists, ask for overwrite confirmation
-    if boss in bosses_data[dungeon]:
-        confirmation = await ctx.send(f"⚠️ **{boss.capitalize()} already exists!** React 👍 to overwrite, 👎 to cancel.")
-        await confirmation.add_reaction("👍")
-        await confirmation.add_reaction("👎")
+    # ✅ Check if boss already exists
+    if boss_name in bosses_data[dungeon]:
+        confirmation_msg = await ctx.send(f"⚠️ **Boss `{boss_name.capitalize()}` already exists in `{dungeon.capitalize()}`!**\nDo you want to overwrite the timer? React with 👍 to confirm, or 👎 to cancel.")
+        await confirmation_msg.add_reaction("👍")
+        await confirmation_msg.add_reaction("👎")
 
         def check(reaction, user):
             return user == ctx.author and str(reaction.emoji) in ["👍", "👎"]
 
         try:
             reaction, _ = await ctx.bot.wait_for("reaction_add", timeout=30.0, check=check)
-            if str(reaction.emoji) == "👎":
-                await ctx.send(f"❌ **Boss {boss.capitalize()} update cancelled.**")
-                return
+            if str(reaction.emoji) == "👍":
+                bosses_data[dungeon][boss_name] = duration
+                save_bosses(bosses_data)
+                await ctx.send(f"✅ **Updated `{boss_name.capitalize()}` timer to {format_duration(duration)}!**")
+            else:
+                await ctx.send("❌ **Boss timer update cancelled.**")
+            return
         except TimeoutError:
-            await ctx.send("⌛ **Boss update cancelled (no response).**")
+            await ctx.send("⌛ **Boss overwrite request timed out.**")
             return
 
-    # ✅ Store the new boss time
-    bosses_data[dungeon][boss] = duration
+    # ✅ Store the boss inside the dungeon
+    bosses_data[dungeon][boss_name] = duration
     save_bosses(bosses_data)
 
-    await ctx.send(f"✅ **Added boss:** {boss.capitalize()} in {dungeon.capitalize()} - `{time_str}`")
+    await ctx.send(f"🔴 **Added Boss:** `{boss_name.capitalize()}` in `{dungeon.capitalize()}` with a timer of `{format_duration(duration)}`.")
 
-
-# ✅ Command to add a dungeon
-async def add_dungeon(ctx, dungeon: str):
-    """Adds a dungeon to the boss tracking system."""
-    dungeon = dungeon.lower().strip()  # ✅ Normalize name
-    bosses_data = load_bosses()  # ✅ Load latest bosses
-
-    if dungeon in bosses_data:
-        await ctx.send(f"⚠️ **{dungeon.capitalize()}** already exists!")
-    else:
-        bosses_data[dungeon] = {}  # ✅ Add new dungeon
-        save_bosses(bosses_data)
-        await ctx.send(f"✅ **Added dungeon:** {dungeon.capitalize()}")
-
-
-# ✅ Command to retrieve bosses from a dungeon
 async def get_bosses(ctx, dungeon: str):
-    """Retrieves all bosses from a dungeon."""
-    dungeon = dungeon.lower().strip()  # ✅ Normalize case
-    bosses_data = load_bosses()  # ✅ Load latest data
+    """Lists all bosses inside a dungeon."""
+    dungeon = dungeon.lower().strip()
 
     if dungeon not in bosses_data:
-        error_message = await ctx.send(f"❌ **{dungeon.capitalize()}** is not a valid dungeon! Use `!b add <dungeon>` first.")
-        await error_message.add_reaction("🗑️")  # ✅ Add delete reaction
+        await ctx.send(f"❌ **Dungeon `{dungeon.capitalize()}` not found!** Use `!b add {dungeon}` to create it.")
         return
 
-    # ✅ Generate events for all bosses in the dungeon
-    for boss_name, boss_time in bosses_data[dungeon].items():
-        countdown_time = int(time.time()) + boss_time  # ✅ Calculate spawn time
+    if not bosses_data[dungeon]:
+        await ctx.send(f"🏰 **{dungeon.capitalize()}** has no bosses added yet!")
+        return
 
-        # ✅ Format the boss event
-        boss_text = (
-            f"🔴 **{boss_name.capitalize()}** 🔴\n"
-            f"👤 **Posted by: {ctx.author.display_name}**\n"
-            f"⏳ **Next spawn at** <t:{countdown_time}:F>\n"
-            f"⏳ **Countdown:** <t:{countdown_time}:R>\n"
-            f"⏳ **Interval:** {boss_time // 60}m"
-        )
+    boss_list = "\n".join(
+        f"🔴 **{boss.capitalize()}** - {format_duration(time)}"
+        for boss, time in bosses_data[dungeon].items()
+    )
+    await ctx.send(f"🏰 **{dungeon.capitalize()} Bosses:**\n{boss_list}")
 
-        message = await ctx.send(boss_text)
+async def list_all_bosses(ctx):
+    """Displays all dungeons and their bosses with timers."""
+    bosses_data = load_bosses()  # ✅ Reload latest data
 
-        # ✅ Add reactions for refresh and delete
-        await message.add_reaction("✅")  # Reset boss event
-        await message.add_reaction("🗑️")  # Delete boss event
+    if not bosses_data:
+        await ctx.send("❌ **No dungeons or bosses found!** Use `!b add <dungeon>` to start adding.")
+        return
+
+    dungeon_list = []
+    
+    for dungeon, bosses in bosses_data.items():
+        boss_entries = "\n".join(
+            f"  🔴 **{boss.capitalize()}** - {format_duration(time)}"
+            for boss, time in bosses.items()
+        ) if bosses else "  ❌ No bosses added yet!"
+        
+        dungeon_list.append(f"🏰 **{dungeon.capitalize()}**\n{boss_entries}")
+
+    formatted_list = "\n\n".join(dungeon_list)
+    await ctx.send(f"📜 **Dungeons & Bosses:**\n{formatted_list}")
+
+def parse_duration(time_str):
+    """Parses time format (h/m/s) and converts to seconds."""
+    duration_mapping = {"h": 3600, "m": 60, "s": 1}
+    total_seconds = 0
 
     try:
-        await ctx.message.delete()  # ✅ Delete user command
-    except discord.NotFound:
-        logging.warning("⚠️ Command message was already deleted.")
-    except discord.Forbidden:
-        logging.warning("🚫 Bot does not have permission to delete messages in this channel!")
+        parts = time_str.lower().split()
+        for part in parts:
+            if part[-1] in duration_mapping and part[:-1].isdigit():
+                total_seconds += int(part[:-1]) * duration_mapping[part[-1]]
+            else:
+                return None
+    except ValueError:
+        return None
+
+    return total_seconds if total_seconds > 0 else None
+
+def format_duration(seconds):
+    """Converts seconds to hours and minutes (e.g., 3600 → '1h', 5400 → '1h 30m')"""
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+
+    if hours > 0 and minutes > 0:
+        return f"{hours}h {minutes}m"
+    elif hours > 0:
+        return f"{hours}h"
+    else:
+        return f"{minutes}m"
