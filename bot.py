@@ -75,6 +75,20 @@ async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str
 
     # ✅ If `!b <dungeon>` is typed, create events for all bosses in that dungeon
     if action and dungeon is None and boss_name is None and time is None:
+        found_dungeon = await get_bosses(ctx, action)  # ✅ Check if it's a dungeon
+        if not found_dungeon:
+            found_boss = await find_boss(ctx, action)  # ✅ Check if it's a boss
+            if not found_boss:
+                error_msg = await ctx.send(f"❌ **Dungeon or Boss `{action.capitalize()}` not found!** Use `!b add <dungeon>` to create one.")
+                await error_msg.add_reaction("🗑️")
+        return
+
+    # ✅ If user types an invalid command
+    error_msg = await ctx.send("❌ **Invalid command!** Use `!b add <dungeon> [boss] [time]`, `!b list` to list everything, or `!b <dungeon>` to create events for bosses.")
+    await error_msg.add_reaction("🗑️")
+
+    # ✅ If `!b <dungeon>` is typed, create events for all bosses in that dungeon
+    if action and dungeon is None and boss_name is None and time is None:
         await get_bosses(ctx, action)  # ✅ Use the first argument as the dungeon name
         return
     
