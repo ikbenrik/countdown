@@ -88,7 +88,7 @@ async def get_bosses(ctx, dungeon: str):
         return
 
     boss_list = "\n".join(
-        f"🔴 **{boss.capitalize()}** - {format_duration(time)}"
+        f"🔴 **{boss.capitalize()}** - {format_duration(int(time))}"  # ✅ Convert `time` to int before passing
         for boss, time in bosses_data[dungeon].items()
     )
     await ctx.send(f"🏰 **{dungeon.capitalize()} Bosses:**\n{boss_list}")
@@ -105,7 +105,7 @@ async def list_all_bosses(ctx):
     
     for dungeon, bosses in bosses_data.items():
         boss_entries = "\n".join(
-            f"  🔴 **{boss.capitalize()}** - {format_duration(time)}"
+            f"  🔴 **{boss.capitalize()}** - {format_duration(int(time))}"  # ✅ Convert `time` to int before passing
             for boss, time in bosses.items()
         ) if bosses else "  ❌ No bosses added yet!"
         
@@ -113,6 +113,15 @@ async def list_all_bosses(ctx):
 
     formatted_list = "\n\n".join(dungeon_list)
     await ctx.send(f"📜 **Dungeons & Bosses:**\n{formatted_list}")
+
+async def get_dungeons(ctx):
+    """Lists all available dungeons."""
+    if not bosses_data:
+        await ctx.send("❌ **No dungeons found!** Use `!b add <dungeon>` to start adding.")
+        return
+
+    dungeon_names = ", ".join(f"🏰 **{dungeon.capitalize()}**" for dungeon in bosses_data.keys())
+    await ctx.send(f"📜 **Available Dungeons:**\n{dungeon_names}")
 
 def parse_duration(time_str):
     """Parses time format (h/m/s) and converts to seconds."""
