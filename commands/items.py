@@ -26,6 +26,7 @@ def save_items(data):
 item_timers = load_items()
 
 async def add_item(ctx, item_name: str, duration_str: str):
+    item_name = item_name.lower().strip()  # ✅ Normalize case
     """Adds a new item with a duration in hours/minutes."""
     logging.debug(f"📌 User {ctx.author} requested to add item: {item_name} with duration {duration_str}")
 
