@@ -38,6 +38,16 @@ async def cd(bot, ctx, *args):
             amount = int(amount_digits) if amount_digits else 1  # ✅ Assign amount (default: 1)
             continue
 
+        # ✅ Detect rarity when only a rarity letter is given (e.g., "!cd lion r")
+        if arg.lower() in "curhel":
+            rarity = arg.lower()
+            continue
+
+        # ✅ Detect amount when only a number is given (e.g., "!cd lion 5")
+        if arg.isdigit():
+            amount = int(arg)
+            continue
+
         # ✅ Detect negative time offset (-X minutes)
         if arg.startswith("-") and arg[1:].isdigit():
             negative_offset = int(arg[1:]) * 60  # Convert minutes to seconds
