@@ -7,7 +7,7 @@ from commands.items import add_item, remove_item, list_items  # ✅ Import all i
 from events.ping_manager import schedule_pings  # ✅ Fixed Import
 import asyncio
 import logging
-from commands.bosses import add_boss, get_bosses, list_all_bosses  # ✅ Import functions
+from commands.bosses import add_boss, get_bosses, list_all_bosses, find_boss
 
 
 # ✅ Reset logging completely
@@ -33,45 +33,30 @@ intents.members = True
 # ✅ Initialize bot
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-@bot.event
-async def on_ready():
-    """Ensures the bot is ready and starts background tasks."""
-    bot.messages_to_delete = {}  # ✅ Ensure message tracking works
-    print(f"✅ Logged in as {bot.user}")
-    print("✅ Bot is running and ready for reactions!")
-
-    # ✅ Start the ping scheduler
-    bot.loop.create_task(schedule_pings(bot))
-
 @bot.command(name="b")
 async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str = None, time: str = None):
-    """Handles boss & dungeon management or creating boss events."""
-
-    if action is None:  # ✅ If no action is given, assume user wants to list all dungeons
+    """Handles boss & dungeon management or listing."""
+    
+    if action is None:  
         await list_all_bosses(ctx)
         return
 
-    if action.lower() == "list":  # ✅ Show all dungeons & bosses
+    if action.lower() == "list":  
         await list_all_bosses(ctx)
         return
     
     if action.lower() == "add":
         if not dungeon:
-            error_msg = await ctx.send("❌ **You must specify a dungeon!** Use `!b add <dungeon>` or `!b add <dungeon> <boss> <time>`.")
-            await error_msg.add_reaction("🗑️")
+            await ctx.send("❌ **You must specify a dungeon!** Use `!b add <dungeon>` or `!b add <dungeon> <boss> <time>`.")
             return
-        
-        if not boss_name:  # ✅ If only a dungeon is given, add it
-            await add_boss(ctx, dungeon)
-            return
-        
-        if not time:  # ✅ If boss is given without time, return error
-            error_msg = await ctx.send("❌ **You must specify a time for the boss!** Use `!b add <dungeon> <boss> <time>`.")
-            await error_msg.add_reaction("🗑️")
-            return
-
-        await add_boss(ctx, dungeon, boss_name, time)  # ✅ Add boss to dungeon
+        await add_boss(ctx, dungeon, boss_name, time)
         return
+
+    found_boss = await find_boss(ctx, action)  # ✅ Check if it's a boss
+    if found_boss:
+        return
+
+    await ctx.send("❌ **Invalid command!** Use `!b add <dungeon> [boss] [time]`, `!b list` to list everything, or `!b <dungeon>` to create events for bosses.")
 
     # ✅ If `!b <dungeon>` is typed, create events for all bosses in that dungeon
     if action and dungeon is None and boss_name is None and time is None:
