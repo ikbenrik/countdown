@@ -38,11 +38,11 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str = None, time: str = None):
     """Handles boss & dungeon management or listing."""
 
-    if action is None:  
+    if action is None:
         await list_all_bosses(ctx)
         return
 
-    if action.lower() == "list":  
+    if action.lower() == "list":
         await list_all_bosses(ctx)
         return
 
@@ -54,11 +54,20 @@ async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str
         await add_boss(ctx, dungeon, boss_name, time)
         return
 
-    found_boss = await find_boss(ctx, action)  
-    if found_boss:
-        return
+    # ✅ First, check if it's a dungeon
+    found_dungeon = action.lower() in bosses_data
+    if found_dungeon:
+        await get_bosses(ctx, action)  # ✅ Create events for all bosses in that dungeon
+        return  # ✅ Prevent looping
 
-    await get_bosses(ctx, action)
+    # ✅ If it's NOT a dungeon, check if it's a boss
+    found_boss = await find_boss(ctx, action)
+    if found_boss:
+        return  # ✅ Prevent looping
+
+    # ❌ If neither a dungeon nor a boss is found
+    error_msg = await ctx.send(f"❌ **Dungeon or Boss `{action.capitalize()}` not found!** Try `!b list` to see all available options.")
+    await error_msg.add_reaction("🗑️")
 
     # ✅ Check if the user typed a boss name
     found_boss = await find_boss(ctx, action)  
