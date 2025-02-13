@@ -41,15 +41,18 @@ async def cd(bot, ctx, *args):
 
     # ✅ If no duration was provided, check item storage
     # ✅ Load latest items
+# ✅ Reload items before checking
 item_timers = load_items()
 
 if duration is None:
-    item_timers = load_items()  # ✅ Reload latest data
+    item_name = item_name.lower().strip()  # ✅ Normalize name
+    item_timers = load_items()  # ✅ Reload latest data from file
+
     if item_name in item_timers:
         duration = item_timers[item_name]
     else:
         error_message = await ctx.send(f"❌ **{item_name.capitalize()}** is not stored! Use `!cd {item_name} <time>` first.")
-        await error_message.add_reaction("🗑️")
+        await error_message.add_reaction("🗑️")  # ✅ Add delete reaction
         return
 
     original_duration = duration  # ✅ Store original full duration for resets
