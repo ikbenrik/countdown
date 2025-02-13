@@ -120,8 +120,11 @@ async def cd(bot, ctx, *args):
         item_name.capitalize(), rarity_name, color, amount, ctx.channel.id, ctx.author.display_name, image_url
     )
 
-    # ✅ Delete the user command message (if exists)
+        # ✅ Delete the user command message (if exists)
     try:
         await ctx.message.delete()
     except discord.NotFound:
         logging.warning("⚠️ Command message was already deleted.")
+    except discord.Forbidden:
+        logging.warning("🚫 Bot does not have permission to delete messages in this channel!")
+
