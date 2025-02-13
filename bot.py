@@ -52,6 +52,12 @@ async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str
         await add_boss(ctx, dungeon, boss_name, time)
         return
 
+    found_boss = await find_boss(ctx, action)  
+    if found_boss:
+        return
+
+    await get_bosses(ctx, action)
+
     # ✅ Check if the user typed a boss name
     found_boss = await find_boss(ctx, action)  
     if found_boss:
