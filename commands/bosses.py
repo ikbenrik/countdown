@@ -60,7 +60,7 @@ async def add_boss(ctx, dungeon: str, boss_name: str = None, time: str = None):
     dungeon = dungeon.lower().strip()
 
     if dungeon not in bosses_data:
-        bosses_data[dungeon] = {}  
+        bosses_data[dungeon] = {}  # ✅ Create dungeon if it doesn't exist
         save_bosses(bosses_data)
         await ctx.send(f"🏰 **Added Dungeon:** `{dungeon.capitalize()}`")
         return
@@ -77,31 +77,42 @@ async def add_boss(ctx, dungeon: str, boss_name: str = None, time: str = None):
         await error_msg.add_reaction("🗑️")
         return
 
-    if boss_name in bosses_data[dungeon]:
-        confirmation_msg = await ctx.send(f"⚠️ **Boss `{boss_name.capitalize()}` already exists in `{dungeon.capitalize()}`!**\nReact with 👍 to overwrite, or 👎 to cancel.")
-        await confirmation_msg.add_reaction("👍")
-        await confirmation_msg.add_reaction("👎")
-
-        def check(reaction, user):
-            return user == ctx.author and str(reaction.emoji) in ["👍", "👎"]
-
-        try:
-            reaction, _ = await ctx.bot.wait_for("reaction_add", timeout=30.0, check=check)
-            if str(reaction.emoji) == "👍":
-                bosses_data[dungeon][boss_name] = duration  
-                save_bosses(bosses_data)
-                await ctx.send(f"✅ **Updated `{boss_name.capitalize()}` timer to {format_duration(duration)}!**")
-            else:
-                await ctx.send("❌ **Boss timer update cancelled.**")
-            return
-        except TimeoutError:
-            await ctx.send("⌛ **Boss overwrite request timed out.**")
-            return
-
     bosses_data[dungeon][boss_name] = duration
     save_bosses(bosses_data)
 
     await ctx.send(f"🔴 **Added Boss:** `{boss_name.capitalize()}` in `{dungeon.capitalize()}` with a timer of `{format_duration(duration)}`.")
+
+async def get_bosses(ctx, dungeon: str):
+    """Creates countdown events for all bosses inside a dungeon."""
+    dungeon = dungeon.lower().strip()
+
+    if dungeon not in bosses_data:
+        error_msg = await ctx.send(f"❌ **Dungeon `{dungeon.capitalize()}` not found!** Use `!b add {dungeon}` to create it.")
+        await error_msg.add_reaction("🗑️")
+        return
+
+    if not bosses_data[dungeon]:
+        error_msg = await ctx.send(f"🏰 **{dungeon.capitalize()}** has no bosses added yet! Use `!b add {dungeon} <boss> <time>`.")
+        await error_msg.add_reaction("🗑️")
+        return
+
+    current_time = int(time.time())
+
+    for boss, duration in bosses_data[dungeon].items():
+        countdown_time = current_time + int(duration)
+
+        countdown_text = (
+            f"🔴 **{boss.capitalize()}** 🔴\n"
+            f"👤 **Posted by: {ctx.author.display_name}**\n"
+            f"⏳ **Next spawn at** <t:{countdown_time}:F>\n"
+            f"⏳ **Countdown:** <t:{countdown_time}:R>\n"
+            f"⏳ **Interval:** {format_duration(duration)}"
+        )
+
+        message = await ctx.send(countdown_text)
+        await message.add_reaction("✅")  
+        await message.add_reaction("🗑️")  
+        await message.add_reaction("🔔")  
 
 async def find_boss(ctx, boss_name: str):
     """Finds and creates an event for a boss, even if the dungeon is not specified."""
