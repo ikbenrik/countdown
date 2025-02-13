@@ -1,16 +1,15 @@
 import time
 import discord
 import config
+import logging
 from utils.helpers import load_items
-
-# ✅ Load saved items
-item_timers = load_items()
 
 async def cd(bot, ctx, *args):
     """Handles event creation and tracking with optional images and negative time adjustments."""
     
     if len(args) < 1:
-        await ctx.send("❌ **Invalid format!** Use `!cd <item> [rarity/amount] [time] [-X minutes]`.")
+        error_message = await ctx.send("❌ **Invalid format!** Use `!cd <item> [rarity/amount] [time] [-X minutes]`.")
+        await error_message.add_reaction("🗑️")  # ✅ Add trash bin reaction
         return
 
     item_name = args[0].lower().strip()
@@ -18,9 +17,9 @@ async def cd(bot, ctx, *args):
     rarity = "r"
     amount = ""
     negative_offset = 0  # Default: No negative offset
-
     duration_mapping = {"h": 3600, "m": 60, "s": 1}
 
+    # ✅ Process arguments
     for arg in args[1:]:
         if arg[-1].lower() in duration_mapping and arg[:-1].isdigit():
             duration = int(arg[:-1]) * duration_mapping[arg[-1].lower()]
@@ -39,24 +38,20 @@ async def cd(bot, ctx, *args):
 
     rarity_name, color = config.RARITY_COLORS.get(rarity, ("Rare", "🔵"))
 
-    # ✅ If no duration was provided, check item storage
-    # ✅ Load latest items
-# ✅ Reload items before checking
-item_timers = load_items()
+    # ✅ Load stored items before checking
+    item_timers = load_items()
 
-if duration is None:
-    item_name = item_name.lower().strip()  # ✅ Normalize name
-    item_timers = load_items()  # ✅ Reload latest data from file
-
-    if item_name in item_timers:
-        duration = item_timers[item_name]
-    else:
-        error_message = await ctx.send(f"❌ **{item_name.capitalize()}** is not stored! Use `!cd {item_name} <time>` first.")
-        try:
-            await error_message.add_reaction("🗑️")  # ✅ Add trash bin reaction
-        except discord.Forbidden:
-            logging.warning("🚫 Bot does not have permission to add reactions to messages!")
-
+    # ✅ Check if item exists before proceeding
+    if duration is None:
+        if item_name in item_timers:
+            duration = item_timers[item_name]
+        else:
+            error_message = await ctx.send(f"❌ **{item_name.capitalize()}** is not stored! Use `!cd {item_name} <time>` first.")
+            try:
+                await error_message.add_reaction("🗑️")  # ✅ Add trash bin reaction
+            except discord.Forbidden:
+                logging.warning("🚫 Bot does not have permission to add reactions to messages!")
+            return  # ✅ Stop execution if item is not found
 
     original_duration = duration  # ✅ Store original full duration for resets
     countdown_time = int(time.time()) + max(0, duration - negative_offset)  # ✅ Adjust time
@@ -73,20 +68,21 @@ if duration is None:
         f"⏳ **Countdown:** <t:{countdown_time}:R>\n"
         f"⏳ **Interval:** {original_duration // 3600}h"
     )
-    
+
     if original_duration % 3600 != 0:
         countdown_text += f" {original_duration % 3600 // 60}m"
 
     # ✅ Send message with image (if exists)
+    embed = discord.Embed()
     if image_url:
-        message = await ctx.send(countdown_text, embed=discord.Embed().set_image(url=image_url))
-    else:
-        message = await ctx.send(countdown_text)
+        embed.set_image(url=image_url)
+    
+    message = await ctx.send(countdown_text, embed=embed if image_url else None)
 
     # ✅ Always add reset and delete reactions
     await message.add_reaction("✅")  # Reset event
     await message.add_reaction("🗑️")  # Delete event
-    await message.add_reaction("🔔")  # ✅ ADD PING REACTION
+    await message.add_reaction("🔔")  # ✅ Add ping reaction
 
     # ✅ Check if the event is in a shared gathering channel
     if ctx.channel.name in config.GATHERING_CHANNELS.values():
