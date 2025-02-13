@@ -142,36 +142,25 @@ async def get_bosses(ctx, dungeon: str):
     
     return True  # ✅ Dungeon found
 
-async def find_boss(ctx, boss_name: str):
-    """Finds a single boss in any dungeon and creates an event for it."""
-    boss_name = boss_name.lower().strip()
+async def list_all_bosses(ctx):
+    """Lists all dungeons and their bosses."""
+    bosses_data = load_bosses()
 
+    if not bosses_data:
+        response = await ctx.send("📜 **No dungeons or bosses stored!** Use `!b add <dungeon>` to start adding.")
+        await response.add_reaction("🗑️")
+        return
+
+    dungeon_list = []
     for dungeon, bosses in bosses_data.items():
-        if boss_name in bosses:
-            duration = bosses[boss_name]
-            await create_boss_event(ctx, boss_name, dungeon, duration)
-            return True  # ✅ Found boss
+        boss_entries = "\n".join(
+            f"  🔴 **{boss.capitalize()}** - {format_duration(duration)}"
+            for boss, duration in bosses.items()
+        ) if bosses else "  ❌ No bosses added yet!"
 
-    return False  # ❌ Boss not found
+        dungeon_list.append(f"🏰 **{dungeon.capitalize()}**\n{boss_entries}")
 
-async def create_boss_event(ctx, boss_name: str, dungeon: str, duration: int):
-    """Creates a countdown event for a single boss."""
-    countdown_time = int(time.time()) + duration  # ✅ Calculate countdown
+    formatted_list = "\n\n".join(dungeon_list)
+    response = await ctx.send(f"📜 **Dungeons & Bosses:**\n{formatted_list}")
+    await response.add_reaction("🗑️")
 
-    countdown_text = (
-        f"🔴 **{boss_name.capitalize()}** 🔴\n"
-        f"👤 **Posted by: {ctx.author.display_name}**\n"
-        f"⏳ **Next spawn at** <t:{countdown_time}:F>\n"
-        f"⏳ **Countdown:** <t:{countdown_time}:R>\n"
-        f"⏳ **Interval:** {format_duration(duration)}"
-    )
-
-    message = await ctx.send(countdown_text)
-    await message.add_reaction("✅")  # Reset event
-    await message.add_reaction("🗑️")  # Delete event
-    await message.add_reaction("🔔")  # Ping reaction
-
-    try:
-        await ctx.message.delete()  # ✅ Delete user command
-    except discord.NotFound:
-        print("⚠️ Warning: Command message was already deleted.")
