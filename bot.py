@@ -53,6 +53,7 @@ async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str
     if action.lower() == "list":
         await list_all_bosses(ctx)
 
+    # ✅ **Try to delete the user’s command message**
     try:
         await ctx.message.delete()
     except discord.NotFound:
@@ -60,7 +61,7 @@ async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str
     except discord.Forbidden:
         print("🚫 Bot does not have permission to delete messages in this channel!")
         return
-
+t 
     if action.lower() == "add":
         if not dungeon:
             error_msg = await ctx.send("❌ **You must specify a dungeon!** Use `!b add <dungeon>` or `!b add <dungeon> <boss> <time>`.")
