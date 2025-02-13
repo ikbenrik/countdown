@@ -52,6 +52,7 @@ async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str
 
     if action.lower() == "list":
         await list_all_bosses(ctx)
+        return  # 🚀 **Ensure it stops execution after listing**
 
     # ✅ **Try to delete the user’s command message**
     try:
