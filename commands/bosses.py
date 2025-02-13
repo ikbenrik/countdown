@@ -144,28 +144,6 @@ async def get_bosses(ctx, dungeon: str):
     except discord.Forbidden:
         logging.warning("🚫 Bot does not have permission to delete messages in this channel!")
 
-async def list_all_bosses(ctx):
-    """Lists all dungeons and their bosses."""
-    bosses_data = load_bosses()
-
-    if not bosses_data:
-        response = await ctx.send("📜 **No dungeons or bosses stored!** Use `!b add <dungeon>` to start adding.")
-        await response.add_reaction("🗑️")
-        return
-
-    dungeon_list = []
-    for dungeon, bosses in bosses_data.items():
-        boss_entries = "\n".join(
-            f"  🔴 **{boss.capitalize()}** - {format_duration(duration)}"
-            for boss, duration in bosses.items()
-        ) if bosses else "  ❌ No bosses added yet!"
-
-        dungeon_list.append(f"🏰 **{dungeon.capitalize()}**\n{boss_entries}")
-
-    formatted_list = "\n\n".join(dungeon_list)
-    response = await ctx.send(f"📜 **Dungeons & Bosses:**\n{formatted_list}")
-    await response.add_reaction("🗑️")
-
 async def find_boss(ctx, boss_name: str):
     """Finds and creates an event for a boss, even if the dungeon is not specified."""
     boss_name = boss_name.lower().strip()
