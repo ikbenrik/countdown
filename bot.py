@@ -9,6 +9,18 @@ import asyncio
 import logging
 from commands.bosses import add_boss, get_bosses, list_all_bosses, find_boss
 
+
+@bot.event
+async def on_ready():
+    """Ensures the bot is ready and starts background tasks."""
+    if not hasattr(bot, "messages_to_delete"):
+        bot.messages_to_delete = {}  # ✅ Ensure message tracking works
+    print(f"✅ Logged in as {bot.user}")
+    print("✅ Bot is running and ready for reactions!")
+
+    # ✅ Start the ping scheduler
+    bot.loop.create_task(schedule_pings(bot))
+
 # ✅ Reset logging completely
 logging.basicConfig(
     level=logging.DEBUG,  # 🔥 Set to DEBUG mode
