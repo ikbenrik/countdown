@@ -47,8 +47,12 @@ async def on_ready():
 async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str = None, time: str = None):
     """Handles boss & dungeon management or listing."""
     
-    if not action:  # ✅ If no action is provided, list all dungeons
+    if action is None:  # ✅ If no action is provided, list all dungeons
         await get_dungeons(ctx)
+        return
+
+    if action.lower() == "list":  # ✅ Show all dungeons & bosses
+        await list_all_bosses(ctx)
         return
     
     if action.lower() == "add":
@@ -66,6 +70,14 @@ async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str
 
         await add_boss(ctx, dungeon, boss_name, time)  # ✅ Add boss to dungeon
         return
+
+    # ✅ If only a dungeon is given, show bosses inside
+    if not boss_name and not time:
+        await get_bosses(ctx, action)  # `action` here is actually the dungeon name
+        return
+    
+    await ctx.send("❌ **Invalid command!** Use `!b add <dungeon> [boss] [time]`, `!b list` to list everything, or `!b <dungeon>` to list bosses.")
+
 
     # ✅ If only a dungeon is given, show bosses inside
     if not boss_name and not time:
