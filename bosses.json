@@ -1,0 +1,11 @@
+{
+  "forge": {
+    "Infernal Titan": "2h",
+    "Flame Guardian": "3h",
+    "Lava Golem": "4h"
+  },
+  "crypts": {
+    "Undead King": "2h",
+    "Cursed Knight": "3h"
+  }
+}
