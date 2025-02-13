@@ -142,25 +142,34 @@ async def get_bosses(ctx, dungeon: str):
     
     return True  # ✅ Dungeon found
 
-async def list_all_bosses(ctx):
-    """Lists all dungeons and their bosses."""
-    bosses_data = load_bosses()
+async def find_boss(ctx, boss_name: str):
+    """Finds a single boss and creates an event for it."""
+    boss_name = boss_name.lower().strip()
 
-    if not bosses_data:
-        response = await ctx.send("📜 **No dungeons or bosses stored!** Use `!b add <dungeon>` to start adding.")
-        await response.add_reaction("🗑️")
-        return
-
-    dungeon_list = []
     for dungeon, bosses in bosses_data.items():
-        boss_entries = "\n".join(
-            f"  🔴 **{boss.capitalize()}** - {format_duration(duration)}"
-            for boss, duration in bosses.items()
-        ) if bosses else "  ❌ No bosses added yet!"
+        if boss_name in bosses:
+            await create_boss_event(ctx, boss_name, dungeon, bosses[boss_name])
+            return True  # ✅ Found and created event
 
-        dungeon_list.append(f"🏰 **{dungeon.capitalize()}**\n{boss_entries}")
+    error_msg = await ctx.send(f"❌ **Boss `{boss_name.capitalize()}` not found!** Try `!b list` to see available bosses.")
+    await error_msg.add_reaction("🗑️")
+    return False  # ✅ Not found
 
-    formatted_list = "\n\n".join(dungeon_list)
-    response = await ctx.send(f"📜 **Dungeons & Bosses:**\n{formatted_list}")
-    await response.add_reaction("🗑️")
+async def create_boss_event(ctx, boss_name, dungeon, duration):
+    """Creates a boss event message."""
+    current_time = int(time.time())
+    countdown_time = current_time + int(duration)
+
+    countdown_text = (
+        f"🔴 **{boss_name.capitalize()}** 🔴\n"
+        f"👤 **Posted by: {ctx.author.display_name}**\n"
+        f"⏳ **Next spawn at** <t:{countdown_time}:F>\n"
+        f"⏳ **Countdown:** <t:{countdown_time}:R>\n"
+        f"⏳ **Interval:** {format_duration(duration)}"
+    )
+
+    message = await ctx.send(countdown_text)
+    await message.add_reaction("✅")  # Reset event
+    await message.add_reaction("🗑️")  # Delete event
+    await message.add_reaction("🔔")  # Ping reaction
 
