@@ -36,21 +36,29 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str = None, time: str = None):
     """Handles boss & dungeon management or listing."""
     
-    if action is None:  # ✅ If no action is provided, list all dungeons
+    if action is None:  
         await list_all_bosses(ctx)
         return
 
-    if action.lower() == "list":  # ✅ Show all dungeons & bosses
+    if action.lower() == "list":  
         await list_all_bosses(ctx)
         return
     
     if action.lower() == "add":
         if not dungeon:
-            await ctx.send("❌ **You must specify a dungeon!** Use `!b add <dungeon>` or `!b add <dungeon> <boss> <time>`.")
+            error_msg = await ctx.send("❌ **You must specify a dungeon!** Use `!b add <dungeon>` or `!b add <dungeon> <boss> <time>`.")
+            await error_msg.add_reaction("🗑️")
             return
-        
         await add_boss(ctx, dungeon, boss_name, time)
         return
+
+    # ✅ Check if the user typed a boss name
+    found_boss = await find_boss(ctx, action)  
+    if found_boss:
+        return
+
+    # ✅ If `!b <dungeon>` is used, create events for all bosses in that dungeon
+    await get_bosses(ctx, action)
 
     # ✅ If it's a boss, create a countdown
     found_boss = await find_boss(ctx, action)  # ✅ Check if it's a boss
