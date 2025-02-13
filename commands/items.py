@@ -8,6 +8,7 @@ ITEMS_FILE = "items.json"
 
 # ✅ Load items from file
 def load_items():
+    """Loads items from JSON file."""
     if not os.path.exists(ITEMS_FILE):
         return {}
     try:
@@ -19,6 +20,7 @@ def load_items():
 
 # ✅ Save items to file
 def save_items(data):
+    """Saves items to JSON file."""
     with open(ITEMS_FILE, "w") as file:
         json.dump(data, file, indent=4)
 
@@ -26,11 +28,10 @@ def save_items(data):
 item_timers = load_items()
 
 async def add_item(ctx, item_name: str, duration_str: str):
-    item_name = item_name.lower().strip()  # ✅ Normalize case
     """Adds a new item with a duration in hours/minutes."""
+    item_name = item_name.lower().strip()  # ✅ Normalize case
     logging.debug(f"📌 User {ctx.author} requested to add item: {item_name} with duration {duration_str}")
 
-    item_name = item_name.lower()  # Normalize case
     duration_mapping = {"h": 3600, "m": 60}
 
     try:
@@ -41,7 +42,8 @@ async def add_item(ctx, item_name: str, duration_str: str):
             if value[-1] in duration_mapping and value[:-1].isdigit()
         )
     except ValueError:
-        await ctx.send("❌ **Invalid time format!** Use `h/m` (e.g., `1h 30m`).")
+        error_message = await ctx.send("❌ **Invalid time format!** Use `h/m` (e.g., `1h 30m`).")
+        await error_message.add_reaction("🗑️")  # ✅ Add trash bin reaction
         return
 
     item_name = item_name.lower().strip()  # ✅ Normalize name before saving
@@ -61,16 +63,17 @@ async def add_item(ctx, item_name: str, duration_str: str):
 
     logging.info(f"✅ Added item: {item_name} with duration {duration_text}")
     response = await ctx.send(f"✅ **Added:** {item_name.capitalize()} - {duration_text}")
-    await response.add_reaction("🗑️")  # 🗑️ Reaction for deletion
+    await response.add_reaction("🗑️")  # ✅ Trash bin reaction
 
+    # ✅ Delete the user's command message
     try:
-        await ctx.message.delete()  # ✅ Delete user command after execution
+        await ctx.message.delete()
     except discord.NotFound:
-        print("⚠️ Warning: Command message was already deleted.")
+        logging.warning("⚠️ Warning: Command message was already deleted.")
 
 async def remove_item(ctx, item_name: str):
     """Removes an item from the list and deletes the command message."""
-    item_name = item_name.lower()
+    item_name = item_name.lower().strip()
 
     if item_name in item_timers:
         del item_timers[item_name]
@@ -78,31 +81,37 @@ async def remove_item(ctx, item_name: str):
         logging.info(f"🗑️ Removed item: {item_name}")
 
         response = await ctx.send(f"🗑️ **Removed:** {item_name.capitalize()}")
-        await response.add_reaction("🗑️")  # 🗑️ Reaction for deletion
+        await response.add_reaction("🗑️")  # ✅ Trash bin reaction
     else:
         logging.warning(f"⚠️ Attempted to remove non-existent item: {item_name}")
         response = await ctx.send(f"⚠️ **Item not found:** {item_name.capitalize()}")
-        await response.add_reaction("🗑️")  # 🗑️ Reaction for deletion
+        await response.add_reaction("🗑️")  # ✅ Trash bin reaction
 
-    # ✅ Attempt to delete the user's command message
+    # ✅ Delete the user's command message
     try:
         await ctx.message.delete()
     except discord.NotFound:
-        print("⚠️ Warning: Command message was already deleted.")
-
+        logging.warning("⚠️ Warning: Command message was already deleted.")
 
 async def list_items(ctx):
     """Displays all stored items and their durations."""
-    item_timers = load_items()  # ✅ Reload latest data
+    global item_timers  # ✅ Ensure we're working with the latest stored items
+    item_timers = load_items()  # ✅ Reload the latest data
 
     if not item_timers:
         response = await ctx.send("📜 **No items stored!** Use `!add <item> <duration>` to store one.")
-        await response.add_reaction("🗑️")  # Allow deletion of bot message
+        await response.add_reaction("🗑️")  # ✅ Trash bin reaction
         return
 
-    formatted_items = []
+    unique_items = {}  # ✅ Dictionary to remove duplicates
     for item, seconds in item_timers.items():
         item_name = item.strip().lower().capitalize()  # ✅ Normalize case & remove extra spaces
+        if item_name in unique_items:
+            continue  # ✅ Skip duplicates
+        unique_items[item_name] = seconds  # ✅ Store only unique items
+
+    formatted_items = []
+    for item, seconds in unique_items.items():
         hours = seconds // 3600
         minutes = (seconds % 3600) // 60
 
@@ -114,14 +123,14 @@ async def list_items(ctx):
         else:
             duration_str = f"{minutes}m"
 
-        formatted_items.append(f"🔹 **{item.capitalize()}** - {duration_str}")
-        formatted_items.append(f"🔹 **{item_name}** - {duration_str}")  # ✅ Display correctly formatted name
+        formatted_items.append(f"🔹 **{item}** - {duration_str}")  # ✅ Display correctly formatted name
 
     item_list_message = "📜 **Stored Items:**\n" + "\n".join(formatted_items)
     response = await ctx.send(item_list_message)
-    await response.add_reaction("🗑️")  # ✅ Reaction to delete message
+    await response.add_reaction("🗑️")  # ✅ Trash bin reaction
 
+    # ✅ Delete the user's command message
     try:
-        await ctx.message.delete()  # ✅ Delete user command after execution
+        await ctx.message.delete()
     except discord.NotFound:
-        print("⚠️ Warning: Command message was already deleted.")
+        logging.warning("⚠️ Warning: Command message was already deleted.")
