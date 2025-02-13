@@ -9,17 +9,7 @@ import asyncio
 import logging
 from commands.bosses import add_boss, get_bosses, list_all_bosses, find_boss
 
-@bot.event
-async def on_ready():
-    """Ensures the bot is ready and starts background tasks."""
-    if not hasattr(bot, "messages_to_delete"):
-        bot.messages_to_delete = {}  # ✅ Ensure message tracking works
 
-    print(f"✅ Logged in as {bot.user}")
-    print("✅ Bot is running and ready for reactions!")
-
-    # ✅ Start the ping scheduler
-    bot.loop.create_task(schedule_pings(bot))
 
 # ✅ Reset logging completely
 logging.basicConfig(
@@ -108,6 +98,18 @@ async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str
     # ✅ If user types an invalid command
     error_msg = await ctx.send("❌ **Invalid command!** Use `!b add <dungeon> [boss] [time]`, `!b list` to list everything, or `!b <dungeon>` to create events for bosses.")
     await error_msg.add_reaction("🗑️")
+
+@bot.event
+async def on_ready():
+    """Ensures the bot is ready and starts background tasks."""
+    if not hasattr(bot, "messages_to_delete"):
+        bot.messages_to_delete = {}  # ✅ Ensure message tracking works
+
+    print(f"✅ Logged in as {bot.user}")
+    print("✅ Bot is running and ready for reactions!")
+
+    # ✅ Start the ping scheduler
+    bot.loop.create_task(schedule_pings(bot))
 
 @bot.event
 async def on_raw_reaction_add(payload):
