@@ -44,7 +44,6 @@ def load_bosses():
     try:
         with open(BOSSES_FILE, "r") as file:
             data = json.load(file)
-            # ✅ Convert all times from string to integer (if stored incorrectly)
             for dungeon, bosses in data.items():
                 for boss, duration in bosses.items():
                     if isinstance(duration, str):  # Fix incorrect storage format
@@ -67,7 +66,7 @@ async def add_boss(ctx, dungeon: str, boss_name: str = None, time: str = None):
     dungeon = dungeon.lower().strip()
 
     if dungeon not in bosses_data:
-        bosses_data[dungeon] = {}  # ✅ Create dungeon if it doesn't exist
+        bosses_data[dungeon] = {}  
         save_bosses(bosses_data)
         await ctx.send(f"🏰 **Added Dungeon:** `{dungeon.capitalize()}`")
         return
@@ -98,7 +97,7 @@ async def add_boss(ctx, dungeon: str, boss_name: str = None, time: str = None):
         try:
             reaction, _ = await ctx.bot.wait_for("reaction_add", timeout=30.0, check=check)
             if str(reaction.emoji) == "👍":
-                bosses_data[dungeon][boss_name] = duration  # ✅ Store as seconds
+                bosses_data[dungeon][boss_name] = duration  
                 save_bosses(bosses_data)
                 await ctx.send(f"✅ **Updated `{boss_name.capitalize()}` timer to {format_duration(duration)}!**")
             else:
@@ -109,7 +108,7 @@ async def add_boss(ctx, dungeon: str, boss_name: str = None, time: str = None):
             return
 
     # ✅ Store the boss inside the dungeon
-    bosses_data[dungeon][boss_name] = duration  # ✅ Store as seconds
+    bosses_data[dungeon][boss_name] = duration  
     save_bosses(bosses_data)
 
     await ctx.send(f"🔴 **Added Boss:** `{boss_name.capitalize()}` in `{dungeon.capitalize()}` with a timer of `{format_duration(duration)}`.")
@@ -121,26 +120,41 @@ async def get_bosses(ctx, dungeon: str):
     if dungeon not in bosses_data:
         error_msg = await ctx.send(f"❌ **Dungeon `{dungeon.capitalize()}` not found!** Use `!b add {dungeon}` to create it.")
         await error_msg.add_reaction("🗑️")
-        return False  # ✅ Return False if no dungeon found
+        return False  
 
     if not bosses_data[dungeon]:
         error_msg = await ctx.send(f"🏰 **{dungeon.capitalize()}** has no bosses added yet!")
         await error_msg.add_reaction("🗑️")
-        return True  # ✅ Dungeon exists but has no bosses
+        return True  
 
     current_time = int(time.time())
 
     for boss, duration in bosses_data[dungeon].items():
         await create_boss_event(ctx, boss, dungeon, duration)
 
-    try:
-        await ctx.message.delete()  # ✅ Delete the user command after execution
-    except discord.NotFound:
-        logging.warning("⚠️ Command message was already deleted.")
-    except discord.Forbidden:
-        logging.warning("🚫 Bot does not have permission to delete messages in this channel!")
-    
-    return True  # ✅ Dungeon found
+    return True  
+
+async def list_all_bosses(ctx):
+    """Lists all dungeons and their bosses."""
+    bosses_data = load_bosses()
+
+    if not bosses_data:
+        response = await ctx.send("📜 **No dungeons or bosses stored!** Use `!b add <dungeon>` to start adding.")
+        await response.add_reaction("🗑️")
+        return
+
+    dungeon_list = []
+    for dungeon, bosses in bosses_data.items():
+        boss_entries = "\n".join(
+            f"  🔴 **{boss.capitalize()}** - {format_duration(duration)}"
+            for boss, duration in bosses.items()
+        ) if bosses else "  ❌ No bosses added yet!"
+
+        dungeon_list.append(f"🏰 **{dungeon.capitalize()}**\n{boss_entries}")
+
+    formatted_list = "\n\n".join(dungeon_list)
+    response = await ctx.send(f"📜 **Dungeons & Bosses:**\n{formatted_list}")
+    await response.add_reaction("🗑️")
 
 async def find_boss(ctx, boss_name: str):
     """Finds a single boss and creates an event for it."""
@@ -149,11 +163,11 @@ async def find_boss(ctx, boss_name: str):
     for dungeon, bosses in bosses_data.items():
         if boss_name in bosses:
             await create_boss_event(ctx, boss_name, dungeon, bosses[boss_name])
-            return True  # ✅ Found and created event
+            return True  
 
     error_msg = await ctx.send(f"❌ **Boss `{boss_name.capitalize()}` not found!** Try `!b list` to see available bosses.")
     await error_msg.add_reaction("🗑️")
-    return False  # ✅ Not found
+    return False  
 
 async def create_boss_event(ctx, boss_name, dungeon, duration):
     """Creates a boss event message."""
@@ -169,7 +183,6 @@ async def create_boss_event(ctx, boss_name, dungeon, duration):
     )
 
     message = await ctx.send(countdown_text)
-    await message.add_reaction("✅")  # Reset event
-    await message.add_reaction("🗑️")  # Delete event
-    await message.add_reaction("🔔")  # Ping reaction
-
+    await message.add_reaction("✅")  
+    await message.add_reaction("🗑️")  
+    await message.add_reaction("🔔")  
