@@ -45,10 +45,10 @@ async def on_ready():
 
 @bot.command(name="b")
 async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str = None, time: str = None):
-    """Handles boss & dungeon management or listing."""
-    
-    if action is None:  # ✅ If no action is provided, assume it's a dungeon name
-        await get_bosses(ctx, dungeon)  # ✅ Generates boss events
+    """Handles boss & dungeon management or creating boss events."""
+
+    if action is None:  # ✅ If no action is given, assume user wants to list all dungeons
+        await list_all_bosses(ctx)
         return
 
     if action.lower() == "list":  # ✅ Show all dungeons & bosses
@@ -73,7 +73,14 @@ async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str
         await add_boss(ctx, dungeon, boss_name, time)  # ✅ Add boss to dungeon
         return
 
-    await ctx.send("❌ **Invalid command!** Use `!b add <dungeon> [boss] [time]`, `!b list` to list everything, or `!b <dungeon>` to create events for bosses.")
+    # ✅ If `!b <dungeon>` is typed, create events for all bosses in that dungeon
+    if action and dungeon is None and boss_name is None and time is None:
+        await get_bosses(ctx, action)  # ✅ Use the first argument as the dungeon name
+        return
+    
+    # ✅ If user types an invalid command
+    error_msg = await ctx.send("❌ **Invalid command!** Use `!b add <dungeon> [boss] [time]`, `!b list` to list everything, or `!b <dungeon>` to create events for bosses.")
+    await error_msg.add_reaction("🗑️")
 
 @bot.event
 async def on_raw_reaction_add(payload):
