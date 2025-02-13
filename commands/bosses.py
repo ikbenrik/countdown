@@ -7,6 +7,25 @@ from discord.ext import commands
 
 BOSSES_FILE = "bosses.json"
 
+# ✅ Load bosses from file
+def load_bosses():
+    if not os.path.exists(BOSSES_FILE):
+        return {}
+    try:
+        with open(BOSSES_FILE, "r") as file:
+            return json.load(file)
+    except json.JSONDecodeError:
+        logging.warning("⚠️ Failed to decode bosses.json! Resetting storage.")
+        return {}
+
+# ✅ Save bosses to file
+def save_bosses(data):
+    with open(BOSSES_FILE, "w") as file:
+        json.dump(data, file, indent=4)
+
+# ✅ Initialize boss storage
+bosses_data = load_bosses()
+
 def parse_duration(time_str):
     """Parses time format (h/m/s) and converts to seconds."""
     duration_mapping = {"h": 3600, "m": 60, "s": 1}
@@ -35,34 +54,6 @@ def format_duration(seconds):
         return f"{hours}h"
     else:
         return f"{minutes}m"
-
-def load_bosses():
-    """Loads bosses from file and ensures correct formatting."""
-    if not os.path.exists(BOSSES_FILE):
-        return {}
-
-    try:
-        with open(BOSSES_FILE, "r") as file:
-            data = json.load(file)
-
-            # ✅ Convert stored times from string to integer if needed
-            for dungeon, bosses in data.items():
-                for boss, duration in bosses.items():
-                    if isinstance(duration, str):  # If stored incorrectly
-                        data[dungeon][boss] = parse_duration(duration)
-            return data
-
-    except json.JSONDecodeError:
-        logging.warning("⚠️ Failed to decode bosses.json! Resetting storage.")
-        return {}
-
-# ✅ Save bosses to file
-def save_bosses(data):
-    with open(BOSSES_FILE, "w") as file:
-        json.dump(data, file, indent=4)
-
-# ✅ Initialize boss storage AFTER defining parsing functions
-bosses_data = load_bosses()
 
 async def add_boss(ctx, dungeon: str, boss_name: str = None, time: str = None):
     """Adds a dungeon or a boss with a timer inside a dungeon."""
@@ -174,3 +165,40 @@ async def list_all_bosses(ctx):
     formatted_list = "\n\n".join(dungeon_list)
     response = await ctx.send(f"📜 **Dungeons & Bosses:**\n{formatted_list}")
     await response.add_reaction("🗑️")
+
+async def find_boss(ctx, boss_name: str):
+    """Finds and creates an event for a boss, even if the dungeon is not specified."""
+    boss_name = boss_name.lower().strip()
+
+    found_boss = None
+    found_dungeon = None
+
+    for dungeon, bosses in bosses_data.items():
+        if boss_name in bosses:
+            found_boss = boss_name
+            found_dungeon = dungeon
+            break  
+
+    if not found_boss:
+        error_msg = await ctx.send(f"❌ **Boss `{boss_name.capitalize()}` not found!** Try `!b list` to see all bosses.")
+        await error_msg.add_reaction("🗑️")
+        return False
+
+    current_time = int(time.time())
+    duration = bosses_data[found_dungeon][found_boss]
+    countdown_time = current_time + int(duration)
+
+    countdown_text = (
+        f"🔴 **{found_boss.capitalize()}** 🔴\n"
+        f"👤 **Posted by: {ctx.author.display_name}**\n"
+        f"⏳ **Next spawn at** <t:{countdown_time}:F>\n"
+        f"⏳ **Countdown:** <t:{countdown_time}:R>\n"
+        f"⏳ **Interval:** {format_duration(duration)}"
+    )
+
+    message = await ctx.send(countdown_text)
+    await message.add_reaction("✅")  
+    await message.add_reaction("🗑️")  
+    await message.add_reaction("🔔")  
+
+    return True
