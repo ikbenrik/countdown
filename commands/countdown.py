@@ -6,7 +6,8 @@ from utils.helpers import load_items
 
 async def cd(bot, ctx, *args):
     """Handles event creation and tracking with optional images and negative time adjustments."""
-    
+
+    # ✅ If no arguments, send error message and delete user command
     if len(args) < 1:
         error_message = await ctx.send("❌ **Invalid format!** Use `!cd <item> [rarity/amount] [time] [-X minutes]`.")
         await error_message.add_reaction("🗑️")  # ✅ Add trash bin reaction
@@ -29,7 +30,7 @@ async def cd(bot, ctx, *args):
             duration = int(arg[:-1]) * duration_mapping[arg[-1].lower()]
             continue
 
-        # ✅ Detect rarity + amount (5r or r5)
+        # ✅ Detect rarity + amount (e.g., "5r" or "r5")
         if any(char in "curhel" for char in arg.lower()) and any(char.isdigit() for char in arg):
             rarity_letter = [char for char in arg.lower() if char in "curhel"][0]
             amount_digits = "".join(filter(str.isdigit, arg))
@@ -45,7 +46,7 @@ async def cd(bot, ctx, *args):
     # ✅ Load stored items before checking
     item_timers = load_items()
 
-    # ✅ Check if item exists before proceeding
+    # ✅ If no duration provided, try using stored duration
     if duration is None:
         if item_name in item_timers:
             duration = item_timers[item_name]
