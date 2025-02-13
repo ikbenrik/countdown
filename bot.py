@@ -7,7 +7,7 @@ from commands.items import add_item, remove_item, list_items  # ✅ Import all i
 from events.ping_manager import schedule_pings  # ✅ Fixed Import
 import asyncio
 import logging
-from commands.bosses import add_boss, get_bosses, list_all_bosses  # ✅ Remove add_dungeon
+from commands.bosses import add_boss, get_bosses, list_all_bosses  # ✅ Import functions
 
 
 # ✅ Reset logging completely
@@ -47,8 +47,8 @@ async def on_ready():
 async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str = None, time: str = None):
     """Handles boss & dungeon management or listing."""
     
-    if action is None:  # ✅ If no action is provided, list all dungeons
-        await get_dungeons(ctx)
+    if action is None:  # ✅ If no action is provided, assume it's a dungeon name
+        await get_bosses(ctx, dungeon)  # ✅ Generates boss events
         return
 
     if action.lower() == "list":  # ✅ Show all dungeons & bosses
@@ -57,7 +57,8 @@ async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str
     
     if action.lower() == "add":
         if not dungeon:
-            await ctx.send("❌ **You must specify a dungeon!** Use `!b add <dungeon>` or `!b add <dungeon> <boss> <time>`.")
+            error_msg = await ctx.send("❌ **You must specify a dungeon!** Use `!b add <dungeon>` or `!b add <dungeon> <boss> <time>`.")
+            await error_msg.add_reaction("🗑️")
             return
         
         if not boss_name:  # ✅ If only a dungeon is given, add it
@@ -65,27 +66,14 @@ async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str
             return
         
         if not time:  # ✅ If boss is given without time, return error
-            await ctx.send("❌ **You must specify a time for the boss!** Use `!b add <dungeon> <boss> <time>`.")
+            error_msg = await ctx.send("❌ **You must specify a time for the boss!** Use `!b add <dungeon> <boss> <time>`.")
+            await error_msg.add_reaction("🗑️")
             return
 
         await add_boss(ctx, dungeon, boss_name, time)  # ✅ Add boss to dungeon
         return
 
-    # ✅ If only a dungeon is given, show bosses inside
-    if not boss_name and not time:
-        await get_bosses(ctx, action)  # `action` here is actually the dungeon name
-        return
-    
-    await ctx.send("❌ **Invalid command!** Use `!b add <dungeon> [boss] [time]`, `!b list` to list everything, or `!b <dungeon>` to list bosses.")
-
-
-    # ✅ If only a dungeon is given, show bosses inside
-    if not boss_name and not time:
-        await get_bosses(ctx, action)  # `action` here is actually the dungeon name
-        return
-    
-    await ctx.send("❌ **Invalid command!** Use `!b add <dungeon> [boss] [time]` or `!b <dungeon>` to list bosses.")
-
+    await ctx.send("❌ **Invalid command!** Use `!b add <dungeon> [boss] [time]`, `!b list` to list everything, or `!b <dungeon>` to create events for bosses.")
 
 @bot.event
 async def on_raw_reaction_add(payload):
