@@ -7,6 +7,8 @@ from commands.items import add_item, remove_item, list_items  # ✅ Import all i
 from events.ping_manager import schedule_pings  # ✅ Fixed Import
 import asyncio
 import logging
+from commands.bosses import add_boss  # ✅ Import boss adding function
+
 
 # ✅ Reset logging completely
 logging.basicConfig(
@@ -40,6 +42,15 @@ async def on_ready():
 
     # ✅ Start the ping scheduler
     bot.loop.create_task(schedule_pings(bot))
+
+@bot.command(name="b")
+async def command_b(ctx, action: str, dungeon: str, boss_name: str = None, time: str = None):
+    """Handles boss & dungeon management."""
+    if action.lower() == "add":
+        await add_boss(ctx, dungeon, boss_name, time)
+    else:
+        await ctx.send("❌ **Invalid command!** Use `!b add <dungeon> [boss] [time]`.")
+
 
 @bot.event
 async def on_raw_reaction_add(payload):
