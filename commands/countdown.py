@@ -52,8 +52,11 @@ if duration is None:
         duration = item_timers[item_name]
     else:
         error_message = await ctx.send(f"❌ **{item_name.capitalize()}** is not stored! Use `!cd {item_name} <time>` first.")
-        await error_message.add_reaction("🗑️")  # ✅ Add delete reaction
-        return
+        try:
+            await error_message.add_reaction("🗑️")  # ✅ Add trash bin reaction
+        except discord.Forbidden:
+            logging.warning("🚫 Bot does not have permission to add reactions to messages!")
+
 
     original_duration = duration  # ✅ Store original full duration for resets
     countdown_time = int(time.time()) + max(0, duration - negative_offset)  # ✅ Adjust time
