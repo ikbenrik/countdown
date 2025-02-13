@@ -1,11 +1,86 @@
 {
   "forge": {
-    "Infernal Titan": "3600",
-    "Flame Guardian": "3600",
-    "Lava Golem": "3600"
+    "Bellowsmasher": "5370",
+    "The Untended Flame": "5370",
+    "Master Smith Eucidiaeh": "5370",
+    "Nurse Pelomneh": "5370",
+    "Alloyed Laborer": "5370",
+    "Forgelord Zammer": "5370",
+    "Forgewright Striger": "5370",
+    "Tapmaster Percheh": "5370",
+    "Administrator Crucia": "5370",
+    "Forgeguard Lassix": "5370"
   },
-  "crypts": {
-    "Undead King": "3600",
-    "Cursed Knight": "3600"
+  "church": {
+    "The Malevolant Mound": "3300",
+    "Knight Commander Darrow": "3300",
+    "Sir Morrow The Valorous (lion mount)": "3300"
+  },
+},
+  "prismarium": {
+    "Khalidur's Harvester": "5370",
+    "Gnashgut of Hearthsong": "540",
+    "Maza's Flame": "600"
+  },
+},
+  "open world": {
+    "The Hornhexer": "2400",
+    "Hoodwinx": "3300"
+  },
+},
+  "ursine": {
+    "Morellius The Essence Gorged": "3300",
+    "Nordhorn": "3300",
+    "Alecog, Eternal Guardian": "3300",
+    "Arbiss, Broodmother": "3300",
+    "Golbo Skinstrip": "3300"
+  },
+},
+  "carphin": {
+    "G'Lympes": "3300",
+    "Eternal Sweeper": "3300",
+    "Crunch Trunk": "3300",
+    "Ocular": "3300",
+    "Seeker of Myths": "3300",
+    "Silenced Shelver": "3300",
+    "The Crier": "3300",
+    "Financier Carrig": "3300",
+    "The Curio Peddler": "3300",
+    "Unclean Hands": "3300",
+    "Hoist": "3300",
+    "The Enchanted Cuirass": "3300",
+    "The Monitor": "3300",
+    "The Mindfrayed Historian": "180",
+    "Drooling Drawer": "540",
+    "The Hushed Librarian": "3300",
+    "The Tormented Invoker": "3300",
+    "The Crushed Curator": "3300",
+    "The Weary Constructor": "3300",
+    "Cursed Cuisinier": "3300",
+    "Prisma": "780",
+    "Wailing Widow": "3300"
+  },
+},
+  "daragal estate": {
+    "Bonebinder Outhouser": "3300",
+    "Olive Bootshredder": "3300",
+    "Timeless Tiller": "3300",
+    "Revenant Reaper": "3300",
+    "Warlord Silvertooth": "3300",
+    "Everlasting Sower": "3300",
+    "Porceilion": "3300",
+    "Slaznug": "3300"
+  },
+  "ros": {
+    "Banished Seeker Hammond": "3300",
+    "Waterlogged Liffy": "3300",
+    "Bloodmage Triune": "3300",
+    "Solace, Arificial Smithy": "3300",
+    "Cursefang": "3300",
+    "Hierophant Amari": "3300",
+    "Demagogue Mosseus": "3300",
+    "Byer, The Last Sentinel": "3300",
+    "Failed Fleshsummon": "3300",
+    "Panethos, Sighted Initiate": "3300"
   }
 }
