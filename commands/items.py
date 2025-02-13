@@ -44,9 +44,9 @@ async def add_item(ctx, item_name: str, duration_str: str):
         await ctx.send("❌ **Invalid time format!** Use `h/m` (e.g., `1h 30m`).")
         return
 
-    # ✅ Store item with duration
+    item_name = item_name.lower().strip()  # ✅ Normalize name before saving
     item_timers[item_name] = duration
-    save_items(item_timers)
+    save_items(item_timers)  # ✅ Ensure it gets stored properly
 
     hours = duration // 3600
     minutes = (duration % 3600) // 60
