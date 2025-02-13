@@ -44,8 +44,10 @@ async def cd(bot, ctx, *args):
         if item_name in item_timers:
             duration = item_timers[item_name]
         else:
-            await ctx.send(f"❌ **{item_name.capitalize()}** is not stored! Use `!cd {item_name} <time>` first.")
+            error_message = await ctx.send(f"❌ **{item_name.capitalize()}** is not stored! Use `!cd {item_name} <time>` first.")
+            await error_message.add_reaction("🗑️")  # ✅ Add trash bin reaction
             return
+
 
     original_duration = duration  # ✅ Store original full duration for resets
     countdown_time = int(time.time()) + max(0, duration - negative_offset)  # ✅ Adjust time
