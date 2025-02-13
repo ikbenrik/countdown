@@ -9,7 +9,6 @@ import asyncio
 import logging
 from commands.bosses import add_boss, get_bosses, list_all_bosses, find_boss
 
-
 # ✅ Reset logging completely
 logging.basicConfig(
     level=logging.DEBUG,  # 🔥 Set to DEBUG mode
