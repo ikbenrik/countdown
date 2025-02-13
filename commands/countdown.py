@@ -14,7 +14,7 @@ async def cd(bot, ctx, *args):
 
     item_name = args[0].lower().strip()
     duration = None
-    rarity = "r"
+    rarity = None  # ✅ Default: No rarity (instead of "r")
     amount = ""
     negative_offset = 0  # Default: No negative offset
     duration_mapping = {"h": 3600, "m": 60, "s": 1}
@@ -28,15 +28,13 @@ async def cd(bot, ctx, *args):
         if any(char in "curhel" for char in arg.lower()) and any(char.isdigit() for char in arg):
             rarity_letter = [char for char in arg.lower() if char in "curhel"]
             amount = "".join(filter(str.isdigit, arg))
-            rarity = rarity_letter[0] if rarity_letter else "r"
+            rarity = rarity_letter[0] if rarity_letter else None  # ✅ Set to None if not found
             continue
 
         # ✅ Detect negative time offset (-X minutes)
         if arg.startswith("-") and arg[1:].isdigit():
             negative_offset = int(arg[1:]) * 60  # Convert minutes to seconds
             continue
-
-    rarity_name, color = config.RARITY_COLORS.get(rarity, ("Rare", "🔵"))
 
     # ✅ Load stored items before checking
     item_timers = load_items()
@@ -61,8 +59,17 @@ async def cd(bot, ctx, *args):
     if ctx.message.attachments:
         image_url = ctx.message.attachments[0].url  # Take the first attached image
 
+    # ✅ Determine rarity color
+    if rarity:
+        rarity_name, color = config.RARITY_COLORS.get(rarity, ("Rare", "🔵"))
+        rarity_display = f"{rarity_name} "  # ✅ Add rarity name before item name
+    else:
+        rarity_display = ""  # ✅ No rarity text if none provided
+        color = "⚪"  # ✅ Use white dot instead of a colored one
+
+    # ✅ Build countdown message
     countdown_text = (
-        f"{color} **{amount}x {rarity_name} {item_name.capitalize()}** {color}\n"
+        f"{color} **{rarity_display}{item_name.capitalize()}** {color}\n"  # ✅ Displays "Rare Lion"
         f"👤 **Posted by: {ctx.author.display_name}**\n"
         f"⏳ **Next spawn at** <t:{countdown_time}:F>\n"
         f"⏳ **Countdown:** <t:{countdown_time}:R>\n"
