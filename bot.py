@@ -7,7 +7,7 @@ from commands.items import add_item, remove_item, list_items  # ✅ Import all i
 from events.ping_manager import schedule_pings  # ✅ Fixed Import
 import asyncio
 import logging
-from commands.bosses import add_boss  # ✅ Import boss adding function
+from commands.bosses import add_boss, add_dungeon, get_bosses
 
 
 # ✅ Reset logging completely
