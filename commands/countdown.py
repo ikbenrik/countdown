@@ -14,8 +14,8 @@ async def cd(bot, ctx, *args):
 
     item_name = args[0].lower().strip()
     duration = None
-    rarity = None  # ✅ Default: No rarity (instead of "r")
-    amount = ""
+    rarity = None  # ✅ Default: No rarity
+    amount = 1  # ✅ Default: 1 (if no amount is provided)
     negative_offset = 0  # Default: No negative offset
     duration_mapping = {"h": 3600, "m": 60, "s": 1}
 
@@ -25,10 +25,12 @@ async def cd(bot, ctx, *args):
             duration = int(arg[:-1]) * duration_mapping[arg[-1].lower()]
             continue
 
+        # ✅ Detect rarity + amount (5r or r5)
         if any(char in "curhel" for char in arg.lower()) and any(char.isdigit() for char in arg):
-            rarity_letter = [char for char in arg.lower() if char in "curhel"]
-            amount = "".join(filter(str.isdigit, arg))
-            rarity = rarity_letter[0] if rarity_letter else None  # ✅ Set to None if not found
+            rarity_letter = [char for char in arg.lower() if char in "curhel"][0]
+            amount_digits = "".join(filter(str.isdigit, arg))
+            rarity = rarity_letter  # ✅ Assign rarity
+            amount = int(amount_digits) if amount_digits else 1  # ✅ Assign amount (default: 1)
             continue
 
         # ✅ Detect negative time offset (-X minutes)
@@ -63,13 +65,15 @@ async def cd(bot, ctx, *args):
     if rarity:
         rarity_name, color = config.RARITY_COLORS.get(rarity, ("Rare", "🔵"))
         rarity_display = f"{rarity_name} "  # ✅ Add rarity name before item name
+        amount_display = f"{amount}x " if amount > 1 else ""  # ✅ Add amount if > 1
     else:
         rarity_display = ""  # ✅ No rarity text if none provided
+        amount_display = f"{amount}x " if amount > 1 else ""  # ✅ Still show amount
         color = "⚪"  # ✅ Use white dot instead of a colored one
 
     # ✅ Build countdown message
     countdown_text = (
-        f"{color} **{rarity_display}{item_name.capitalize()}** {color}\n"  # ✅ Displays "Rare Lion"
+        f"{color} **{amount_display}{rarity_display}{item_name.capitalize()}** {color}\n"  # ✅ Displays "5x Rare Lion"
         f"👤 **Posted by: {ctx.author.display_name}**\n"
         f"⏳ **Next spawn at** <t:{countdown_time}:F>\n"
         f"⏳ **Countdown:** <t:{countdown_time}:R>\n"
