@@ -10,6 +10,10 @@ async def cd(bot, ctx, *args):
     if len(args) < 1:
         error_message = await ctx.send("❌ **Invalid format!** Use `!cd <item> [rarity/amount] [time] [-X minutes]`.")
         await error_message.add_reaction("🗑️")  # ✅ Add trash bin reaction
+        try:
+            await ctx.message.delete()  # ✅ Delete user command
+        except discord.NotFound:
+            logging.warning("⚠️ Command message was already deleted.")
         return
 
     item_name = args[0].lower().strip()
@@ -51,6 +55,13 @@ async def cd(bot, ctx, *args):
                 await error_message.add_reaction("🗑️")  # ✅ Add trash bin reaction
             except discord.Forbidden:
                 logging.warning("🚫 Bot does not have permission to add reactions to messages!")
+            
+            # ✅ Delete user command message
+            try:
+                await ctx.message.delete()
+            except discord.NotFound:
+                logging.warning("⚠️ Command message was already deleted.")
+
             return  # ✅ Stop execution if item is not found
 
     original_duration = duration  # ✅ Store original full duration for resets
@@ -107,3 +118,9 @@ async def cd(bot, ctx, *args):
         message, original_duration, duration - negative_offset, negative_offset,  # ✅ Store the negative offset
         item_name.capitalize(), rarity_name, color, amount, ctx.channel.id, ctx.author.display_name, image_url
     )
+
+    # ✅ Delete the user command message (if exists)
+    try:
+        await ctx.message.delete()
+    except discord.NotFound:
+        logging.warning("⚠️ Command message was already deleted.")
