@@ -113,33 +113,63 @@ async def add_boss(ctx, dungeon: str, boss_name: str = None, time: str = None):
 
     await ctx.send(f"🔴 **Added Boss:** `{boss_name.capitalize()}` in `{dungeon.capitalize()}` with a timer of `{format_duration(duration)}`.")
 
-async def find_boss(ctx, boss_name: str):
-    """Finds a single boss and creates an event for it."""
-    boss_name = boss_name.lower().strip()
+async def get_bosses(ctx, dungeon: str):
+    """Creates countdown events for all bosses inside a dungeon."""
+    dungeon = dungeon.lower().strip()
 
-    for dungeon, bosses in bosses_data.items():
-        if boss_name in bosses:
-            await create_boss_event(ctx, boss_name, dungeon, bosses[boss_name])
-            return True  
+    if dungeon not in bosses_data:
+        error_msg = await ctx.send(f"❌ **Dungeon `{dungeon.capitalize()}` not found!** Use `!b add {dungeon}` to create it.")
+        await error_msg.add_reaction("🗑️")
+        return
 
-    error_msg = await ctx.send(f"❌ **Boss `{boss_name.capitalize()}` not found!** Try `!b list` to see available bosses.")
-    await error_msg.add_reaction("🗑️")
-    return False  
+    if not bosses_data[dungeon]:
+        error_msg = await ctx.send(f"🏰 **{dungeon.capitalize()}** has no bosses added yet!")
+        await error_msg.add_reaction("🗑️")
+        return
 
-async def create_boss_event(ctx, boss_name, dungeon, duration):
-    """Creates a boss event message."""
     current_time = int(time.time())
-    countdown_time = current_time + int(duration)
 
-    countdown_text = (
-        f"🔴 **{boss_name.capitalize()}** 🔴\n"
-        f"👤 **Posted by: {ctx.author.display_name}**\n"
-        f"⏳ **Next spawn at** <t:{countdown_time}:F>\n"
-        f"⏳ **Countdown:** <t:{countdown_time}:R>\n"
-        f"⏳ **Interval:** {format_duration(duration)}"
-    )
+    for boss, duration in bosses_data[dungeon].items():
+        countdown_time = current_time + int(duration)
 
-    message = await ctx.send(countdown_text)
-    await message.add_reaction("✅")  
-    await message.add_reaction("🗑️")  
-    await message.add_reaction("🔔")  
+        countdown_text = (
+            f"🔴 **{boss.capitalize()}** 🔴\n"
+            f"👤 **Posted by: {ctx.author.display_name}**\n"
+            f"⏳ **Next spawn at** <t:{countdown_time}:F>\n"
+            f"⏳ **Countdown:** <t:{countdown_time}:R>\n"
+            f"⏳ **Interval:** {format_duration(duration)}"
+        )
+
+        message = await ctx.send(countdown_text)
+        await message.add_reaction("✅")  
+        await message.add_reaction("🗑️")  
+        await message.add_reaction("🔔")  
+
+    try:
+        await ctx.message.delete()  
+    except discord.NotFound:
+        logging.warning("⚠️ Command message was already deleted.")
+    except discord.Forbidden:
+        logging.warning("🚫 Bot does not have permission to delete messages in this channel!")
+
+async def list_all_bosses(ctx):
+    """Lists all dungeons and their bosses."""
+    bosses_data = load_bosses()
+
+    if not bosses_data:
+        response = await ctx.send("📜 **No dungeons or bosses stored!** Use `!b add <dungeon>` to start adding.")
+        await response.add_reaction("🗑️")
+        return
+
+    dungeon_list = []
+    for dungeon, bosses in bosses_data.items():
+        boss_entries = "\n".join(
+            f"  🔴 **{boss.capitalize()}** - {format_duration(duration)}"
+            for boss, duration in bosses.items()
+        ) if bosses else "  ❌ No bosses added yet!"
+
+        dungeon_list.append(f"🏰 **{dungeon.capitalize()}**\n{boss_entries}")
+
+    formatted_list = "\n\n".join(dungeon_list)
+    response = await ctx.send(f"📜 **Dungeons & Bosses:**\n{formatted_list}")
+    await response.add_reaction("🗑️")
