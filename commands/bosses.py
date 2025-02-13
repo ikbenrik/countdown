@@ -1,6 +1,7 @@
 import logging
 import json
 import os
+import time
 import discord
 from discord.ext import commands
 
@@ -12,7 +13,13 @@ def load_bosses():
         return {}
     try:
         with open(BOSSES_FILE, "r") as file:
-            return json.load(file)
+            data = json.load(file)
+            # ✅ Convert all times from string to integer (if stored incorrectly)
+            for dungeon, bosses in data.items():
+                for boss, duration in bosses.items():
+                    if isinstance(duration, str):  # Fix incorrect storage format
+                        data[dungeon][boss] = parse_duration(duration)  
+            return data
     except json.JSONDecodeError:
         logging.warning("⚠️ Failed to decode bosses.json! Resetting storage.")
         return {}
@@ -111,36 +118,6 @@ async def get_bosses(ctx, dungeon: str):
 
     try:
         await ctx.message.delete()  # ✅ Delete the user command after execution
-    except discord.NotFound:
-        logging.warning("⚠️ Command message was already deleted.")
-    except discord.Forbidden:
-        logging.warning("🚫 Bot does not have permission to delete messages in this channel!")
-
-async def list_all_bosses(ctx):
-    """Displays all dungeons and their bosses with timers."""
-    bosses_data = load_bosses()  # ✅ Reload latest data
-
-    if not bosses_data:
-        error_msg = await ctx.send("❌ **No dungeons or bosses found!** Use `!b add <dungeon>` to start adding.")
-        await error_msg.add_reaction("🗑️")
-        return
-
-    dungeon_list = []
-    
-    for dungeon, bosses in bosses_data.items():
-        boss_entries = "\n".join(
-            f"  🔴 **{boss.capitalize()}** - {format_duration(int(time))}"  # ✅ Ensure time is converted correctly
-            for boss, time in bosses.items()
-        ) if bosses else "  ❌ No bosses added yet!"
-        
-        dungeon_list.append(f"🏰 **{dungeon.capitalize()}**\n{boss_entries}")
-
-    formatted_list = "\n\n".join(dungeon_list)
-    response = await ctx.send(f"📜 **Dungeons & Bosses:**\n{formatted_list}")
-    await response.add_reaction("🗑️")  # ✅ Trash bin reaction to delete list
-
-    try:
-        await ctx.message.delete()  # ✅ Delete user command after execution
     except discord.NotFound:
         logging.warning("⚠️ Command message was already deleted.")
     except discord.Forbidden:
