@@ -3,7 +3,6 @@ import json
 import os
 import discord
 from utils.helpers import load_items
-from utils.github_sync import push_to_github  # ✅ Import auto-push function
 
 ITEMS_FILE = "items.json"
 
@@ -27,10 +26,11 @@ def save_items(data):
 item_timers = load_items()
 
 async def add_item(ctx, item_name: str, duration_str: str):
-    """Adds a new item with a duration in hours/minutes and syncs with GitHub."""
     item_name = item_name.lower().strip()  # ✅ Normalize case
+    """Adds a new item with a duration in hours/minutes."""
     logging.debug(f"📌 User {ctx.author} requested to add item: {item_name} with duration {duration_str}")
 
+    item_name = item_name.lower()  # Normalize case
     duration_mapping = {"h": 3600, "m": 60}
 
     try:
@@ -44,9 +44,9 @@ async def add_item(ctx, item_name: str, duration_str: str):
         await ctx.send("❌ **Invalid time format!** Use `h/m` (e.g., `1h 30m`).")
         return
 
-    item_timers[item_name] = duration  # ✅ Store item
-    save_items(item_timers)  # ✅ Save to items.json
-    push_to_github()  # ✅ Auto-push to GitHub!
+    item_name = item_name.lower().strip()  # ✅ Normalize name before saving
+    item_timers[item_name] = duration
+    save_items(item_timers)  # ✅ Ensure it gets stored properly
 
     hours = duration // 3600
     minutes = (duration % 3600) // 60
@@ -69,13 +69,12 @@ async def add_item(ctx, item_name: str, duration_str: str):
         print("⚠️ Warning: Command message was already deleted.")
 
 async def remove_item(ctx, item_name: str):
-    """Removes an item from the list and syncs with GitHub."""
+    """Removes an item from the list and deletes the command message."""
     item_name = item_name.lower()
 
     if item_name in item_timers:
         del item_timers[item_name]
         save_items(item_timers)
-        push_to_github()  # ✅ Auto-push to GitHub after deletion
         logging.info(f"🗑️ Removed item: {item_name}")
 
         response = await ctx.send(f"🗑️ **Removed:** {item_name.capitalize()}")
@@ -90,6 +89,7 @@ async def remove_item(ctx, item_name: str):
         await ctx.message.delete()
     except discord.NotFound:
         print("⚠️ Warning: Command message was already deleted.")
+
 
 async def list_items(ctx):
     """Displays all stored items and their durations."""
@@ -114,6 +114,7 @@ async def list_items(ctx):
         else:
             duration_str = f"{minutes}m"
 
+        formatted_items.append(f"🔹 **{item.capitalize()}** - {duration_str}")
         formatted_items.append(f"🔹 **{item_name}** - {duration_str}")  # ✅ Display correctly formatted name
 
     item_list_message = "📜 **Stored Items:**\n" + "\n".join(formatted_items)
