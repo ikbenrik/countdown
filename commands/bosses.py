@@ -43,69 +43,65 @@ def parse_duration(duration_str):
         return None  # ❌ Invalid format
 
 # ✅ Command to add dungeons and bosses
-@commands.command(name="b")
-async def command_b(ctx, action: str, dungeon: str, boss: str = None, time_str: str = None):
-    """Handles boss tracking. Use `!b add <dungeon> [boss] [time]` to add bosses."""
-
+async def add_boss(ctx, dungeon: str, boss: str, time_str: str):
+    """Adds a boss to a dungeon with a specific timer."""
     dungeon = dungeon.lower().strip()  # ✅ Normalize dungeon name
+    boss = boss.lower().strip()  # ✅ Normalize boss name
+
     bosses_data = load_bosses()  # ✅ Load latest bosses
 
-    # ✅ Handle adding a dungeon
-    if action.lower() == "add" and not boss and not time_str:
-        if dungeon in bosses_data:
-            await ctx.send(f"⚠️ **{dungeon.capitalize()}** already exists!")
-        else:
-            bosses_data[dungeon] = {}  # ✅ Add new dungeon
-            save_bosses(bosses_data)
-            await ctx.send(f"✅ **Added dungeon:** {dungeon.capitalize()}")
+    if dungeon not in bosses_data:
+        await ctx.send(f"❌ **Dungeon {dungeon.capitalize()} does not exist!** Use `!b add {dungeon}` first.")
         return
 
-    # ✅ Handle adding a boss
-    if action.lower() == "add" and boss and time_str:
-        boss = boss.lower().strip()  # ✅ Normalize boss name
+    # ✅ Convert time to seconds
+    duration = parse_duration(time_str)
+    if duration is None:
+        await ctx.send("❌ **Invalid time format!** Use `h/m/s` (e.g., `1h 30m`, `3000s`).")
+        return
 
-        if dungeon not in bosses_data:
-            await ctx.send(f"❌ **Dungeon {dungeon.capitalize()} does not exist!** Use `!b add {dungeon}` first.")
-            return
+    # ✅ If boss exists, ask for overwrite confirmation
+    if boss in bosses_data[dungeon]:
+        confirmation = await ctx.send(f"⚠️ **{boss.capitalize()} already exists!** React 👍 to overwrite, 👎 to cancel.")
+        await confirmation.add_reaction("👍")
+        await confirmation.add_reaction("👎")
 
-        # ✅ Convert time to seconds
-        duration = parse_duration(time_str)
-        if duration is None:
-            await ctx.send("❌ **Invalid time format!** Use `h/m/s` (e.g., `1h 30m`, `3000s`).")
-            return
+        def check(reaction, user):
+            return user == ctx.author and str(reaction.emoji) in ["👍", "👎"]
 
-        # ✅ If boss exists, ask for overwrite confirmation
-        if boss in bosses_data[dungeon]:
-            confirmation = await ctx.send(f"⚠️ **{boss.capitalize()} already exists!** React 👍 to overwrite, 👎 to cancel.")
-            await confirmation.add_reaction("👍")
-            await confirmation.add_reaction("👎")
-
-            def check(reaction, user):
-                return user == ctx.author and str(reaction.emoji) in ["👍", "👎"]
-
-            try:
-                reaction, _ = await ctx.bot.wait_for("reaction_add", timeout=30.0, check=check)
-                if str(reaction.emoji) == "👎":
-                    await ctx.send(f"❌ **Boss {boss.capitalize()} update cancelled.**")
-                    return
-            except TimeoutError:
-                await ctx.send("⌛ **Boss update cancelled (no response).**")
+        try:
+            reaction, _ = await ctx.bot.wait_for("reaction_add", timeout=30.0, check=check)
+            if str(reaction.emoji) == "👎":
+                await ctx.send(f"❌ **Boss {boss.capitalize()} update cancelled.**")
                 return
+        except TimeoutError:
+            await ctx.send("⌛ **Boss update cancelled (no response).**")
+            return
 
-        # ✅ Store the new boss time
-        bosses_data[dungeon][boss] = duration
+    # ✅ Store the new boss time
+    bosses_data[dungeon][boss] = duration
+    save_bosses(bosses_data)
+
+    await ctx.send(f"✅ **Added boss:** {boss.capitalize()} in {dungeon.capitalize()} - `{time_str}`")
+
+
+# ✅ Command to add a dungeon
+async def add_dungeon(ctx, dungeon: str):
+    """Adds a dungeon to the boss tracking system."""
+    dungeon = dungeon.lower().strip()  # ✅ Normalize name
+    bosses_data = load_bosses()  # ✅ Load latest bosses
+
+    if dungeon in bosses_data:
+        await ctx.send(f"⚠️ **{dungeon.capitalize()}** already exists!")
+    else:
+        bosses_data[dungeon] = {}  # ✅ Add new dungeon
         save_bosses(bosses_data)
+        await ctx.send(f"✅ **Added dungeon:** {dungeon.capitalize()}")
 
-        await ctx.send(f"✅ **Added boss:** {boss.capitalize()} in {dungeon.capitalize()} - `{time_str}`")
-        return
-
-    await ctx.send("❌ **Invalid command format!** Use `!b add <dungeon>` or `!b add <dungeon> <boss> <time>`.")
 
 # ✅ Command to retrieve bosses from a dungeon
-@commands.command(name="b")
-async def command_b(ctx, dungeon: str):
-    """Handles boss tracking in dungeons. Use `!b <dungeon>` to get all bosses."""
-
+async def get_bosses(ctx, dungeon: str):
+    """Retrieves all bosses from a dungeon."""
     dungeon = dungeon.lower().strip()  # ✅ Normalize case
     bosses_data = load_bosses()  # ✅ Load latest data
 
