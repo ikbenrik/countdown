@@ -102,6 +102,7 @@ async def list_items(ctx):
 
     formatted_items = []
     for item, seconds in item_timers.items():
+        item_name = item.strip().lower().capitalize()  # ✅ Normalize case & remove extra spaces
         hours = seconds // 3600
         minutes = (seconds % 3600) // 60
 
@@ -113,7 +114,8 @@ async def list_items(ctx):
         else:
             duration_str = f"{minutes}m"
 
-        formatted_items.append(f"🔹 **{item.capitalize()}** - {duration_str}")
+        formatted_items.append(f"🔹 **{item_name}** - {duration_str}")  # ✅ Display correctly formatted name
+
 
     item_list_message = "📜 **Stored Items:**\n" + "\n".join(formatted_items)
     response = await ctx.send(item_list_message)
