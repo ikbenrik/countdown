@@ -7,6 +7,37 @@ from discord.ext import commands
 
 BOSSES_FILE = "bosses.json"
 
+# ✅ Parse time format (h/m/s) and convert to seconds
+def parse_duration(time_str):
+    """Parses time format (h/m/s) and converts to seconds."""
+    duration_mapping = {"h": 3600, "m": 60, "s": 1}
+    total_seconds = 0
+
+    try:
+        parts = time_str.lower().split()
+        for part in parts:
+            if part[-1] in duration_mapping and part[:-1].isdigit():
+                total_seconds += int(part[:-1]) * duration_mapping[part[-1]]
+            else:
+                return None
+    except ValueError:
+        return None
+
+    return total_seconds if total_seconds > 0 else None
+
+# ✅ Convert seconds to readable format
+def format_duration(seconds):
+    """Converts seconds to hours and minutes (e.g., 3600 → '1h', 5400 → '1h 30m')"""
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+
+    if hours > 0 and minutes > 0:
+        return f"{hours}h {minutes}m"
+    elif hours > 0:
+        return f"{hours}h"
+    else:
+        return f"{minutes}m"
+
 # ✅ Load bosses from file
 def load_bosses():
     if not os.path.exists(BOSSES_FILE):
@@ -121,4 +152,25 @@ async def list_all_bosses(ctx):
 
     if not bosses_data:
         error_msg = await ctx.send("❌ **No dungeons or bosses found!** Use `!b add <dungeon>` to start adding.")
-       
+        await error_msg.add_reaction("🗑️")  # ✅ Allow message deletion
+        return
+
+    dungeon_list = []
+    
+    for dungeon, bosses in bosses_data.items():
+        boss_entries = "\n".join(
+            f"  🔴 **{boss.capitalize()}** - {format_duration(time)}"
+            for boss, time in bosses.items()
+        ) if bosses else "  ❌ No bosses added yet!"
+        
+        dungeon_list.append(f"🏰 **{dungeon.capitalize()}**\n{boss_entries}")
+
+    formatted_list = "\n\n".join(dungeon_list)
+    response = await ctx.send(f"📜 **Dungeons & Bosses:**\n{formatted_list}")
+    await response.add_reaction("🗑️")  # ✅ Add delete reaction
+
+    # ✅ Delete the command message
+    try:
+        await ctx.message.delete()
+    except discord.NotFound:
+        logging.warning("⚠️ Command message was already deleted.")
