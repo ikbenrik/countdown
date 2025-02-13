@@ -58,10 +58,14 @@ async def cd(bot, ctx, *args):
                 logging.warning("🚫 Bot does not have permission to add reactions to messages!")
             
             # ✅ Delete user command message
+            # ✅ Delete the user's command message in ALL cases
             try:
                 await ctx.message.delete()
             except discord.NotFound:
-                logging.warning("⚠️ Command message was already deleted.")
+                print("⚠️ Warning: Command message was already deleted.")
+            except discord.Forbidden:
+                print("🚫 Bot does not have permission to delete messages!")
+
 
             return  # ✅ Stop execution if item is not found
 
