@@ -44,12 +44,35 @@ async def on_ready():
     bot.loop.create_task(schedule_pings(bot))
 
 @bot.command(name="b")
-async def command_b(ctx, action: str, dungeon: str, boss_name: str = None, time: str = None):
-    """Handles boss & dungeon management."""
+async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str = None, time: str = None):
+    """Handles boss & dungeon management or listing."""
+    
+    if not action:  # ✅ If no action is provided, list all dungeons
+        await get_dungeons(ctx)
+        return
+    
     if action.lower() == "add":
-        await add_boss(ctx, dungeon, boss_name, time)
-    else:
-        await ctx.send("❌ **Invalid command!** Use `!b add <dungeon> [boss] [time]`.")
+        if not dungeon:
+            await ctx.send("❌ **You must specify a dungeon!** Use `!b add <dungeon>` or `!b add <dungeon> <boss> <time>`.")
+            return
+        
+        if not boss_name:  # ✅ If only a dungeon is given, add it
+            await add_boss(ctx, dungeon)
+            return
+        
+        if not time:  # ✅ If boss is given without time, return error
+            await ctx.send("❌ **You must specify a time for the boss!** Use `!b add <dungeon> <boss> <time>`.")
+            return
+
+        await add_boss(ctx, dungeon, boss_name, time)  # ✅ Add boss to dungeon
+        return
+
+    # ✅ If only a dungeon is given, show bosses inside
+    if not boss_name and not time:
+        await get_bosses(ctx, action)  # `action` here is actually the dungeon name
+        return
+    
+    await ctx.send("❌ **Invalid command!** Use `!b add <dungeon> [boss] [time]` or `!b <dungeon>` to list bosses.")
 
 
 @bot.event
