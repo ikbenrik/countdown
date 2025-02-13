@@ -40,14 +40,17 @@ async def cd(bot, ctx, *args):
     rarity_name, color = config.RARITY_COLORS.get(rarity, ("Rare", "🔵"))
 
     # ✅ If no duration was provided, check item storage
-    if duration is None:
-        if item_name in item_timers:
-            duration = item_timers[item_name]
-        else:
-            error_message = await ctx.send(f"❌ **{item_name.capitalize()}** is not stored! Use `!cd {item_name} <time>` first.")
-            await error_message.add_reaction("🗑️")  # ✅ Add trash bin reaction
-            return
+    # ✅ Load latest items
+item_timers = load_items()
 
+if duration is None:
+    item_timers = load_items()  # ✅ Reload latest data
+    if item_name in item_timers:
+        duration = item_timers[item_name]
+    else:
+        error_message = await ctx.send(f"❌ **{item_name.capitalize()}** is not stored! Use `!cd {item_name} <time>` first.")
+        await error_message.add_reaction("🗑️")
+        return
 
     original_duration = duration  # ✅ Store original full duration for resets
     countdown_time = int(time.time()) + max(0, duration - negative_offset)  # ✅ Adjust time
