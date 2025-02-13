@@ -53,6 +53,14 @@ async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str
             await error_msg.add_reaction("🗑️")
             return
         await add_boss(ctx, dungeon, boss_name, time)
+
+    # ✅ **Try to delete the user’s command message**
+    try:
+        await ctx.message.delete()
+    except discord.NotFound:
+        print("⚠️ Warning: Command message was already deleted.")
+    except discord.Forbidden:
+        print("🚫 Bot does not have permission to delete messages in this channel!")
         return
 
     # ✅ First, check if it's a dungeon
