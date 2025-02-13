@@ -7,7 +7,37 @@ from discord.ext import commands
 
 BOSSES_FILE = "bosses.json"
 
-# ✅ Load bosses from file
+# ✅ Define duration parsing function BEFORE it's used
+def parse_duration(time_str):
+    """Parses time format (h/m/s) and converts to seconds."""
+    duration_mapping = {"h": 3600, "m": 60, "s": 1}
+    total_seconds = 0
+
+    try:
+        parts = time_str.lower().split()
+        for part in parts:
+            if part[-1] in duration_mapping and part[:-1].isdigit():
+                total_seconds += int(part[:-1]) * duration_mapping[part[-1]]
+            else:
+                return None
+    except ValueError:
+        return None
+
+    return total_seconds if total_seconds > 0 else None
+
+def format_duration(seconds):
+    """Converts seconds to hours and minutes (e.g., 3600 → '1h', 5400 → '1h 30m')"""
+    hours = int(seconds) // 3600
+    minutes = (int(seconds) % 3600) // 60
+
+    if hours > 0 and minutes > 0:
+        return f"{hours}h {minutes}m"
+    elif hours > 0:
+        return f"{hours}h"
+    else:
+        return f"{minutes}m"
+
+# ✅ Load bosses from file AFTER defining parse_duration()
 def load_bosses():
     if not os.path.exists(BOSSES_FILE):
         return {}
@@ -18,7 +48,7 @@ def load_bosses():
             for dungeon, bosses in data.items():
                 for boss, duration in bosses.items():
                     if isinstance(duration, str):  # Fix incorrect storage format
-                        data[dungeon][boss] = parse_duration(duration)  
+                        data[dungeon][boss] = parse_duration(duration)
             return data
     except json.JSONDecodeError:
         logging.warning("⚠️ Failed to decode bosses.json! Resetting storage.")
@@ -122,32 +152,3 @@ async def get_bosses(ctx, dungeon: str):
         logging.warning("⚠️ Command message was already deleted.")
     except discord.Forbidden:
         logging.warning("🚫 Bot does not have permission to delete messages in this channel!")
-
-def parse_duration(time_str):
-    """Parses time format (h/m/s) and converts to seconds."""
-    duration_mapping = {"h": 3600, "m": 60, "s": 1}
-    total_seconds = 0
-
-    try:
-        parts = time_str.lower().split()
-        for part in parts:
-            if part[-1] in duration_mapping and part[:-1].isdigit():
-                total_seconds += int(part[:-1]) * duration_mapping[part[-1]]
-            else:
-                return None
-    except ValueError:
-        return None
-
-    return total_seconds if total_seconds > 0 else None
-
-def format_duration(seconds):
-    """Converts seconds to hours and minutes (e.g., 3600 → '1h', 5400 → '1h 30m')"""
-    hours = int(seconds) // 3600  # ✅ Ensure conversion from string to integer
-    minutes = (int(seconds) % 3600) // 60
-
-    if hours > 0 and minutes > 0:
-        return f"{hours}h {minutes}m"
-    elif hours > 0:
-        return f"{hours}h"
-    else:
-        return f"{minutes}m"
