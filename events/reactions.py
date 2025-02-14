@@ -110,15 +110,22 @@ async def handle_reaction(bot, payload):
         logging.info(f"📌 Event claimed, replaced `📥` with sharing reactions.")
 
     embed = None
-    if image_url:
+    file = None
+
+    # ✅ Check if the original event had an attachment (e.g., pasted image)
+    if message.attachments:
+        file = await message.attachments[0].to_file()  # ✅ Convert attachment to a file
+
+    # ✅ If the image was originally from a URL, use an embed
+    elif image_url:
         embed = discord.Embed()
         embed.set_image(url=image_url)
 
-    # ✅ Force attach the image if needed
+    # ✅ Send the new event message, with either an embed or re-uploaded file
     if embed:
         new_message = await channel.send(event_text, embed=embed)
-    elif message.attachments:  
-        new_message = await channel.send(event_text, file=await message.attachments[0].to_file())  # ✅ Re-upload if needed
+    elif file:
+        new_message = await channel.send(event_text, file=file)
     else:
         new_message = await channel.send(event_text)
 
@@ -134,7 +141,7 @@ async def handle_reaction(bot, payload):
     bot.messages_to_delete[new_message.id] = (
         new_message, original_duration, adjusted_remaining_time, negative_adjustment,
         item_name.capitalize(), rarity_name, color, amount, channel.id, creator_name,
-        image_url if image_url else message.attachments[0].url if message.attachments else None  # ✅ Force store image!
+        message.attachments[0] if message.attachments else image_url  # ✅ Store either the file OR the URL
     )
 
 
