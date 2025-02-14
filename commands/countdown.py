@@ -79,10 +79,9 @@ async def cd(bot, ctx, *args):
     original_duration = duration  # ✅ Store original full duration for resets
     countdown_time = int(time.time()) + max(0, duration - negative_offset)  # ✅ Adjust time
 
-    # ✅ Capture image attachment if provided
-    image_file = None
+    image_url = None
     if ctx.message.attachments:
-        image_file = await repost_image(ctx, ctx.message.attachments[0])  # ✅ Re-upload instead of embedding
+        image_url = ctx.message.attachments[0].url  # ✅ Store the image URL instead of re-uploading
 
     # ✅ Determine rarity color dynamically
     if rarity:
@@ -106,10 +105,12 @@ async def cd(bot, ctx, *args):
     if original_duration % 3600 != 0:
         countdown_text += f" {original_duration % 3600 // 60}m"
     
-    if image_file:
-        message = await ctx.send(countdown_text, file=image_file)  # ✅ Send image as a file
-    else:
-        message = await ctx.send(countdown_text)  # ✅ Send message without an image
+    embed = None
+    if image_url:
+        embed = discord.Embed()
+        embed.set_image(url=image_url)  # ✅ Use embed to store the image properly
+
+    message = await ctx.send(countdown_text, embed=embed)
 
     # ✅ Always add reset and delete reactions
     await message.add_reaction("✅")  # Reset event
