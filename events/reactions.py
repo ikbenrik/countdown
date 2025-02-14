@@ -49,7 +49,8 @@ async def handle_reaction(bot, payload):
     message, original_duration, remaining_duration, negative_adjustment, item_name, rarity_name, color, amount, channel_id, creator_name, image_url = message_data
 
     current_time = int(time.time())
-    adjusted_remaining_time = max(0, remaining_duration - (current_time - int(message.created_at.timestamp())))
+    new_spawn_time = current_time + original_duration  # ✅ Reset to full interval
+
 
     # ✅ Universal Event Format
     def generate_event_text(actor: str, action: str) -> str:
@@ -57,8 +58,8 @@ async def handle_reaction(bot, payload):
         return (
             f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
             f"👤 **{action} by: {actor}**\n"
-            f"⏳ **Next spawn at** <t:{current_time + adjusted_remaining_time}:F>\n"
-            f"⏳ **Countdown:** <t:{current_time + adjusted_remaining_time}:R>\n"
+            f"⏳ **Next spawn at** <t:{new_spawn_time}:F>\n"
+            f"⏳ **Countdown:** <t:{new_spawn_time}:R>\n"
             f"⏳ **Interval: {original_duration//60}m**"
         )
 
@@ -131,9 +132,9 @@ async def handle_reaction(bot, payload):
         await new_message.add_reaction(emoji)
 
     bot.messages_to_delete[new_message.id] = (
-        new_message, original_duration, adjusted_remaining_time, negative_adjustment,
+        new_message, original_duration, original_duration, negative_adjustment,  # ✅ Ensure the full interval is saved!
         item_name.capitalize(), rarity_name, color, amount, channel.id, creator_name,
-        image_url if image_url else message.attachments[0].url if message.attachments else None  # ✅ Force store image!
+        file
     )
 
 
