@@ -50,12 +50,12 @@ async def handle_reaction(bot, payload):
 
     current_time = int(time.time())
 
-    # ✅ If sharing (🌿, 🌲, ⛏️), or claim (📥), reset the full timer
-    if reaction_emoji in ["📥", "⛏️", "🌲", "🌿"]:
-        new_spawn_time = current_time + original_duration  # ✅ Full reset
-    else:
-        new_spawn_time = current_time + adjusted_remaining_time  # ⏳ Keep remaining time for other reactions
-
+    # ✅ Determine the correct time:
+    if reaction_emoji == "✅":  # ✅ Reset Reaction - Full reset
+        new_spawn_time = current_time + original_duration
+        remaining_duration = original_duration  # ✅ Forget negative time
+    else:  # 🌿, 🌲, ⛏️, 📥 Share/Claim - Keep Remaining Time
+        new_spawn_time = current_time + max(0, remaining_duration - (current_time - int(message.created_at.timestamp())))
 
     # ✅ Universal Event Format
     def generate_event_text(actor: str, action: str) -> str:
@@ -137,11 +137,9 @@ async def handle_reaction(bot, payload):
         await new_message.add_reaction(emoji)
 
     bot.messages_to_delete[new_message.id] = (
-        new_message, original_duration, original_duration, negative_adjustment,  # ✅ Ensure the full interval is saved!
+        new_message, original_duration, remaining_duration, negative_adjustment,  # ✅ Carry over remaining time
         item_name.capitalize(), rarity_name, color, amount, channel.id, creator_name,
         file
     )
-
-
 
     await message.delete()  # ✅ Remove old message
