@@ -134,7 +134,32 @@ async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str
 
 @bot.event
 async def on_raw_reaction_add(payload):
+    """Handles reaction events, including bulk deletion for !list messages."""
     print(f"🔎 DEBUG: Reaction detected: {payload.emoji.name} by User ID {payload.user_id}")
+
+    if payload.emoji.name == "🗑️":
+        guild = bot.get_guild(payload.guild_id)
+        channel = bot.get_channel(payload.channel_id)
+
+        try:
+            message = await channel.fetch_message(payload.message_id)
+        except discord.NotFound:
+            return  # ✅ Message was already deleted
+
+        # ✅ Check if the message is from the bot and is part of the !list output
+        if bot.list_messages_to_delete and message in bot.list_messages_to_delete:
+            for msg in bot.list_messages_to_delete:
+                try:
+                    await msg.delete()
+                except discord.NotFound:
+                    continue  # ✅ Skip if already deleted
+                except discord.Forbidden:
+                    print("🚫 Bot does not have permission to delete messages!")
+                    return
+            bot.list_messages_to_delete = []  # ✅ Clear the list after deletion
+            return
+
+    # ✅ Handle other reactions normally
     await handle_reaction(bot, payload)
 
 @bot.command(name="cd")
