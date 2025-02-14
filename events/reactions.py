@@ -133,8 +133,9 @@ async def handle_reaction(bot, payload):
     bot.messages_to_delete[new_message.id] = (
         new_message, original_duration, adjusted_remaining_time, negative_adjustment,
         item_name.capitalize(), rarity_name, color, amount, channel.id, creator_name,
-        message.attachments[0] if message.attachments else image_url  # ✅ Store either the file OR the URL
+        image_url if image_url else message.attachments[0].url if message.attachments else None  # ✅ Force store image!
     )
+
 
 
     await message.delete()  # ✅ Remove old message
