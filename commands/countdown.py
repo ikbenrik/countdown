@@ -119,10 +119,10 @@ async def cd(bot, ctx, *args):
     if original_duration % 3600 != 0:
         countdown_text += f" {original_duration % 3600 // 60}m"
 
-    # ✅ Send message with image (if exists)
-    embed = discord.Embed()
-    if image_url:
-        embed.set_image(url=image_url)
+    if image_file:
+        message = await ctx.send(countdown_text, file=image_file)  # ✅ Attach image as a file
+    else:
+        message = await ctx.send(countdown_text)
     
     message = await ctx.send(countdown_text, embed=embed if image_url else None)
 
