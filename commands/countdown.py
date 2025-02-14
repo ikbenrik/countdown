@@ -82,10 +82,10 @@ async def cd(bot, ctx, *args):
     image_url = None
     file = None
 
-    # ✅ Store the actual attachment file instead of just the URL
+    # ✅ If the user uploaded an image, save the actual file
     if ctx.message.attachments:
-        file = await ctx.message.attachments[0].to_file()  # ✅ Store as a file
-        image_url = ctx.message.attachments[0].url
+        file = await ctx.message.attachments[0].to_file()
+        image_url = ctx.message.attachments[0].url  # ✅ Keep URL as backup
 
     # ✅ Determine rarity color dynamically
     if rarity:
