@@ -127,10 +127,10 @@ async def handle_reaction(bot, payload):
     for emoji in reset_reactions:
         await new_message.add_reaction(emoji)
 
-    bot.messages_to_delete[message.id] = (
-        message, original_duration, duration - negative_offset, negative_offset,
-        item_name.capitalize(), rarity_name, color, amount, ctx.channel.id, ctx.author.display_name,
-        image_url  # ✅ Store the actual image URL so it can be reused!
+    bot.messages_to_delete[new_message.id] = (
+        new_message, original_duration, adjusted_remaining_time, negative_adjustment,
+        item_name.capitalize(), rarity_name, color, amount, channel.id, creator_name,
+        image_url  # ✅ Ensure the image URL is stored properly
     )
 
 
