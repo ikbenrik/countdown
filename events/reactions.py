@@ -109,14 +109,16 @@ async def handle_reaction(bot, payload):
         reset_reactions = list(config.GATHERING_CHANNELS.keys())  # ✅ After claiming, sharing should be available
         logging.info(f"📌 Event claimed, replaced `📥` with sharing reactions.")
 
-    new_message = None
-
+    embed = None
     if image_url:
         embed = discord.Embed()
         embed.set_image(url=image_url)
-        new_message = await channel.send(event_text, embed=embed)  # ✅ Send with an image embed
+
+    # ✅ If image exists, send as embed; otherwise, send as plain message
+    if embed:
+        new_message = await channel.send(event_text, embed=embed)
     else:
-        new_message = await channel.send(event_text)  # ✅ Send without an image
+        new_message = await channel.send(event_text)
 
     # ✅ Always add Reset, Delete, and Bell Reactions
     await new_message.add_reaction("✅")
@@ -130,7 +132,7 @@ async def handle_reaction(bot, payload):
     bot.messages_to_delete[new_message.id] = (
         new_message, original_duration, adjusted_remaining_time, negative_adjustment,
         item_name.capitalize(), rarity_name, color, amount, channel.id, creator_name,
-        image_url  # ✅ Ensure the image URL is stored properly
+        image_url if image_url else message.attachments[0].url if message.attachments else None  # ✅ Ensure image is stored!
     )
 
 
