@@ -111,12 +111,12 @@ async def handle_reaction(bot, payload):
 
     new_message = None
 
-    embed = None
     if image_url:
         embed = discord.Embed()
         embed.set_image(url=image_url)
-
-    new_message = await channel.send(event_text, embed=embed)
+        new_message = await channel.send(event_text, embed=embed)  # ✅ Send with an image embed
+    else:
+        new_message = await channel.send(event_text)  # ✅ Send without an image
 
     # ✅ Always add Reset, Delete, and Bell Reactions
     await new_message.add_reaction("✅")
