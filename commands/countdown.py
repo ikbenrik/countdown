@@ -36,34 +36,37 @@ async def cd(bot, ctx, *args):
     negative_offset = 0  # Default: No negative offset
     duration_mapping = {"h": 3600, "m": 60, "s": 1}
 
+    # ✅ **New Parsing Fix**
     for arg in args[1:]:
-    if arg[-1].lower() in duration_mapping and arg[:-1].isdigit():
-        duration = int(arg[:-1]) * duration_mapping[arg[-1].lower()]
-        continue
+        arg = arg.lower()
 
-    # ✅ Detect rarity + amount (e.g., "5r" or "r5")
-    if any(char in "curhel" for char in arg.lower()) and any(char.isdigit() for char in arg):
-        rarity_letter = [char for char in arg.lower() if char in "curhel"][0]
-        amount_digits = "".join(filter(str.isdigit, arg))
-        rarity = rarity_letter  # ✅ Assign rarity
-        amount = int(amount_digits) if amount_digits else 1  # ✅ Assign amount (default: 1)
-        continue
+        # ✅ Check for rarity + amount (e.g., "5r" or "r5")
+        if any(char in "curhel" for char in arg) and any(char.isdigit() for char in arg):
+            rarity_letter = next(char for char in arg if char in "curhel")
+            amount_digits = "".join(filter(str.isdigit, arg))
+            rarity = rarity_letter  
+            amount = int(amount_digits) if amount_digits else 1  
+            continue
 
-    # ✅ Detect rarity when only a rarity letter is given (e.g., "!cd lion r")
-    if arg.lower() in "curhel":
-        rarity = arg.lower()
-        continue
+        # ✅ Check for standalone rarity (e.g., "r")
+        if arg in "curhel":
+            rarity = arg
+            continue
 
-    # ✅ Detect amount when only a number is given (e.g., "!cd lion 5")
-    if arg.isdigit():
-        amount = int(arg)
-        continue
+        # ✅ Check for standalone amount (e.g., "5")
+        if arg.isdigit():
+            amount = int(arg)
+            continue
 
-    # ✅ Detect negative time offset (-X minutes)
-    if arg.startswith("-") and arg[1:].isdigit():
-        negative_offset = int(arg[1:]) * 60  # Convert minutes to seconds
-        continue
+        # ✅ Check for negative time offset (e.g., "-5")
+        if arg.startswith("-") and arg[1:].isdigit():
+            negative_offset = int(arg[1:]) * 60  
+            continue
 
+        # ✅ **Fix: Check for duration, but only if it’s at the end**
+        if arg[-1] in duration_mapping and arg[:-1].isdigit():
+            duration = int(arg[:-1]) * duration_mapping[arg[-1]]
+            continue
     # ✅ Load stored items before checking
     item_timers = load_items()
 
