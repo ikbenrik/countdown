@@ -146,8 +146,12 @@ async def on_raw_reaction_add(payload):
         except discord.NotFound:
             return  # ✅ Message was already deleted
 
+        # ✅ Ensure `list_messages_to_delete` exists
+        if not hasattr(bot, "list_messages_to_delete"):
+            bot.list_messages_to_delete = []
+
         # ✅ Check if the message is from the bot and is part of the !list output
-        if bot.list_messages_to_delete and message in bot.list_messages_to_delete:
+        if bot.list_messages_to_delete and message.id in [msg.id for msg in bot.list_messages_to_delete]:
             for msg in bot.list_messages_to_delete:
                 try:
                     await msg.delete()
@@ -195,6 +199,9 @@ async def on_ready():
     """Ensures the bot is ready and starts background tasks."""
     if not hasattr(bot, "messages_to_delete"):
         bot.messages_to_delete = {}  # ✅ Ensure message tracking works
+
+    if not hasattr(bot, "list_messages_to_delete"):
+        bot.list_messages_to_delete = []  # ✅ Ensure list message tracking works
 
     print(f"✅ Logged in as {bot.user}")
     print("✅ Bot is running and ready for reactions!")
