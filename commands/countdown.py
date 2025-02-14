@@ -76,12 +76,12 @@ for arg in args[1:]:
         negative_offset = int(arg[1:]) * 60  # Convert minutes to seconds
         continue
 
-# ✅ Set final values
-if parsed_duration is not None:
-    duration = parsed_duration
-if parsed_rarity:
-    rarity = parsed_rarity
-amount = parsed_amount  # Default: 1 if no amount was set
+    # ✅ Set final values
+    if parsed_duration is not None:
+        duration = parsed_duration
+    if parsed_rarity:
+        rarity = parsed_rarity
+    amount = parsed_amount  # Default: 1 if no amount was set
     # ✅ Load stored items before checking
     item_timers = load_items()
 
