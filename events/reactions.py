@@ -109,23 +109,15 @@ async def handle_reaction(bot, payload):
         reset_reactions = list(config.GATHERING_CHANNELS.keys())  # ✅ After claiming, sharing should be available
         logging.info(f"📌 Event claimed, replaced `📥` with sharing reactions.")
 
-    embed = None
     file = None
 
     # ✅ If original event had an attachment (pasted image)
     if message.attachments:
         file = await message.attachments[0].to_file()  # ✅ Convert to file
 
-    # ✅ If the image was from a URL, use embed
-    elif image_url:
-        embed = discord.Embed()
-        embed.set_image(url=image_url)
-
     # ✅ Send the new event message
     if file:
         new_message = await channel.send(event_text, file=file)  # ✅ Uploads the image again
-    elif embed:
-        new_message = await channel.send(event_text, embed=embed)
     else:
         new_message = await channel.send(event_text)
 
