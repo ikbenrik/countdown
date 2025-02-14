@@ -36,37 +36,52 @@ async def cd(bot, ctx, *args):
     negative_offset = 0  # Default: No negative offset
     duration_mapping = {"h": 3600, "m": 60, "s": 1}
 
-    # ✅ **New Parsing Fix**
-    for arg in args[1:]:
-        arg = arg.lower()
+# ✅ Fix: First, separate rarity+amount from duration
+parsed_duration = None
+parsed_rarity = None
+parsed_amount = 1  # Default: 1
+negative_offset = 0  # Default: No negative offset
 
-        # ✅ Check for rarity + amount (e.g., "5r" or "r5")
-        if any(char in "curhel" for char in arg) and any(char.isdigit() for char in arg):
-            rarity_letter = next(char for char in arg if char in "curhel")
-            amount_digits = "".join(filter(str.isdigit, arg))
-            rarity = rarity_letter  
-            amount = int(amount_digits) if amount_digits else 1  
-            continue
+for arg in args[1:]:
+    arg = arg.lower()
 
-        # ✅ Check for standalone rarity (e.g., "r")
-        if arg in "curhel":
-            rarity = arg
-            continue
+    # ✅ Check if argument is a duration (e.g., 3h, 5h)
+    if arg[-1] in duration_mapping and arg[:-1].isdigit():
+        if parsed_duration is None:  # Only set the first duration found
+            parsed_duration = int(arg[:-1]) * duration_mapping[arg[-1]]
+        else:
+            logging.warning(f"⚠️ Ignored extra duration: {arg}")
+        continue
 
-        # ✅ Check for standalone amount (e.g., "5")
-        if arg.isdigit():
-            amount = int(arg)
-            continue
+    # ✅ Check if argument is a rarity + amount (e.g., "5h" = 5 heroic)
+    if any(c in "curhel" for c in arg) and any(c.isdigit() for c in arg):
+        rarity_letter = next(c for c in arg if c in "curhel")
+        amount_digits = "".join(filter(str.isdigit, arg))
+        parsed_rarity = rarity_letter
+        parsed_amount = int(amount_digits) if amount_digits else 1
+        continue
 
-        # ✅ Check for negative time offset (e.g., "-5")
-        if arg.startswith("-") and arg[1:].isdigit():
-            negative_offset = int(arg[1:]) * 60  
-            continue
+    # ✅ Check if argument is just a rarity (e.g., "h" for heroic)
+    if arg in "curhel":
+        parsed_rarity = arg
+        continue
 
-        # ✅ **Fix: Check for duration, but only if it’s at the end**
-        if arg[-1] in duration_mapping and arg[:-1].isdigit():
-            duration = int(arg[:-1]) * duration_mapping[arg[-1]]
-            continue
+    # ✅ Check if argument is just an amount (e.g., "5")
+    if arg.isdigit():
+        parsed_amount = int(arg)
+        continue
+
+    # ✅ Check for negative time offset (-X minutes)
+    if arg.startswith("-") and arg[1:].isdigit():
+        negative_offset = int(arg[1:]) * 60  # Convert minutes to seconds
+        continue
+
+# ✅ Set final values
+if parsed_duration is not None:
+    duration = parsed_duration
+if parsed_rarity:
+    rarity = parsed_rarity
+amount = parsed_amount  # Default: 1 if no amount was set
     # ✅ Load stored items before checking
     item_timers = load_items()
 
