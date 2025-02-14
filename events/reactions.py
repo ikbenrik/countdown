@@ -49,7 +49,12 @@ async def handle_reaction(bot, payload):
     message, original_duration, remaining_duration, negative_adjustment, item_name, rarity_name, color, amount, channel_id, creator_name, image_url = message_data
 
     current_time = int(time.time())
-    new_spawn_time = current_time + original_duration  # ✅ Reset to full interval
+
+    # ✅ If sharing (🌿, 🌲, ⛏️), or claim (📥), reset the full timer
+    if reaction_emoji in ["📥", "⛏️", "🌲", "🌿"]:
+        new_spawn_time = current_time + original_duration  # ✅ Full reset
+    else:
+        new_spawn_time = current_time + adjusted_remaining_time  # ⏳ Keep remaining time for other reactions
 
 
     # ✅ Universal Event Format
