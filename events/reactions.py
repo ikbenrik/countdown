@@ -112,20 +112,20 @@ async def handle_reaction(bot, payload):
     embed = None
     file = None
 
-    # ✅ Check if the original event had an attachment (e.g., pasted image)
+    # ✅ Check if the original event had an attachment (pasted image)
     if message.attachments:
         file = await message.attachments[0].to_file()  # ✅ Convert attachment to a file
 
-    # ✅ If the image was originally from a URL, use an embed
+    # ✅ If the image was originally a URL, use an embed
     elif image_url:
         embed = discord.Embed()
         embed.set_image(url=image_url)
 
-    # ✅ Send the new event message, with either an embed or re-uploaded file
-    if embed:
-        new_message = await channel.send(event_text, embed=embed)
-    elif file:
+    # ✅ Send the new event message, with either an embed or a re-uploaded file
+    if file:
         new_message = await channel.send(event_text, file=file)
+    elif embed:
+        new_message = await channel.send(event_text, embed=embed)
     else:
         new_message = await channel.send(event_text)
 
