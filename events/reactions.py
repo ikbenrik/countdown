@@ -114,9 +114,11 @@ async def handle_reaction(bot, payload):
         embed = discord.Embed()
         embed.set_image(url=image_url)
 
-    # ✅ If image exists, send as embed; otherwise, send as plain message
+    # ✅ Force attach the image if needed
     if embed:
         new_message = await channel.send(event_text, embed=embed)
+    elif message.attachments:  
+        new_message = await channel.send(event_text, file=await message.attachments[0].to_file())  # ✅ Re-upload if needed
     else:
         new_message = await channel.send(event_text)
 
@@ -132,7 +134,7 @@ async def handle_reaction(bot, payload):
     bot.messages_to_delete[new_message.id] = (
         new_message, original_duration, adjusted_remaining_time, negative_adjustment,
         item_name.capitalize(), rarity_name, color, amount, channel.id, creator_name,
-        image_url if image_url else message.attachments[0].url if message.attachments else None  # ✅ Ensure image is stored!
+        image_url if image_url else message.attachments[0].url if message.attachments else None  # ✅ Force store image!
     )
 
 
