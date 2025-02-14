@@ -111,12 +111,12 @@ async def handle_reaction(bot, payload):
 
     new_message = None
 
+    embed = None
     if image_url:
         embed = discord.Embed()
         embed.set_image(url=image_url)
-        new_message = await channel.send(event_text, embed=embed)
-    else:
-        new_message = await channel.send(event_text)
+
+    new_message = await channel.send(event_text, embed=embed)
 
     # ✅ Always add Reset, Delete, and Bell Reactions
     await new_message.add_reaction("✅")
@@ -127,10 +127,11 @@ async def handle_reaction(bot, payload):
     for emoji in reset_reactions:
         await new_message.add_reaction(emoji)
 
-    # ✅ Store Updated Event Data
-    bot.messages_to_delete[new_message.id] = (
-        new_message, original_duration, adjusted_remaining_time, negative_adjustment,
-        item_name, rarity_name, color, amount, new_message.channel.id, creator_name, image_url
+    bot.messages_to_delete[message.id] = (
+        message, original_duration, duration - negative_offset, negative_offset,
+        item_name.capitalize(), rarity_name, color, amount, ctx.channel.id, ctx.author.display_name,
+        image_url  # ✅ Store the actual image URL so it can be reused!
     )
+
 
     await message.delete()  # ✅ Remove old message
