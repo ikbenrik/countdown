@@ -79,13 +79,11 @@ async def cd(bot, ctx, *args):
     original_duration = duration  # ✅ Store original full duration for resets
     countdown_time = int(time.time()) + max(0, duration - negative_offset)  # ✅ Adjust time
 
-    image_url = None
-    file = None
+    image_file = None
 
-    # ✅ If the user uploaded an image, save the actual file
+    # ✅ If the user uploaded an image, save it as a file
     if ctx.message.attachments:
-        file = await ctx.message.attachments[0].to_file()
-        image_url = ctx.message.attachments[0].url  # ✅ Keep URL as backup
+        image_file = await ctx.message.attachments[0].to_file()
 
     # ✅ Determine rarity color dynamically
     if rarity:
@@ -109,12 +107,10 @@ async def cd(bot, ctx, *args):
     if original_duration % 3600 != 0:
         countdown_text += f" {original_duration % 3600 // 60}m"
     
-    embed = None
-    if image_url:
-        embed = discord.Embed()
-        embed.set_image(url=image_url)  # ✅ Use embed to store the image properly
-
-    message = await ctx.send(countdown_text, embed=embed)
+    if image_file:
+        message = await ctx.send(countdown_text, file=image_file)  # ✅ Upload image file instead of using embed
+    else:
+        message = await ctx.send(countdown_text)
 
     # ✅ Always add reset and delete reactions
     await message.add_reaction("✅")  # Reset event
@@ -132,7 +128,7 @@ async def cd(bot, ctx, *args):
     bot.messages_to_delete[message.id] = (
         message, original_duration, duration - negative_offset, negative_offset,
         item_name.capitalize(), rarity_name, color, amount, ctx.channel.id, ctx.author.display_name,
-        message.attachments[0].url if message.attachments else None  # ✅ Store actual image URL
+        image_file  # ✅ Store the actual image file for reuse!
     )
 
 
