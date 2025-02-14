@@ -94,8 +94,8 @@ async def remove_item(ctx, item_name: str):
         logging.warning("⚠️ Warning: Command message was already deleted.")
 
 async def list_items(ctx):
-    """Displays all stored items and their durations."""
-    global item_timers  # ✅ Ensure we're working with the latest stored items
+    """Displays all stored items and their durations, splitting into multiple messages if needed."""
+    global item_timers
     item_timers = load_items()  # ✅ Reload the latest data
 
     if not item_timers:
@@ -103,14 +103,16 @@ async def list_items(ctx):
         await response.add_reaction("🗑️")  # ✅ Trash bin reaction
         return
 
-    unique_items = {}  # ✅ Dictionary to remove duplicates
+    unique_items = {}  # ✅ Dictionary to store unique items
     for item, seconds in item_timers.items():
         item_name = item.strip().lower().capitalize()  # ✅ Normalize case & remove extra spaces
         if item_name in unique_items:
             continue  # ✅ Skip duplicates
         unique_items[item_name] = seconds  # ✅ Store only unique items
 
-    formatted_items = []
+    message_chunks = []  # ✅ List to store message parts
+    current_chunk = "📜 **Stored Items:**\n"  # ✅ Start with a header
+
     for item, seconds in unique_items.items():
         hours = seconds // 3600
         minutes = (seconds % 3600) // 60
@@ -123,14 +125,37 @@ async def list_items(ctx):
         else:
             duration_str = f"{minutes}m"
 
-        formatted_items.append(f"🔹 **{item}** - {duration_str}")  # ✅ Display correctly formatted name
+        entry = f"🔹 **{item}** - {duration_str}\n"
 
-    item_list_message = "📜 **Stored Items:**\n" + "\n".join(formatted_items)
-    response = await ctx.send(item_list_message)
-    await response.add_reaction("🗑️")  # ✅ Trash bin reaction
+        # ✅ If adding this entry exceeds 2000 characters, store the current chunk and start a new one
+        if len(current_chunk) + len(entry) > 2000:
+            message_chunks.append(current_chunk)
+            current_chunk = "📜 **Stored Items (contd.):**\n" + entry  # ✅ Start a new chunk
+        else:
+            current_chunk += entry
+
+    # ✅ Add the last chunk
+    if current_chunk:
+        message_chunks.append(current_chunk)
+
+    sent_messages = []  # ✅ Store sent messages for bulk deletion
+
+    # ✅ Send each chunk as a separate message
+    for chunk in message_chunks:
+        msg = await ctx.send(chunk)
+        sent_messages.append(msg)
+
+    # ✅ Add a 🗑️ reaction to the last message for bulk deletion
+    if sent_messages:
+        await sent_messages[-1].add_reaction("🗑️")
+
+    # ✅ Store the messages for deletion handling
+    bot = ctx.bot
+    bot.list_messages_to_delete = sent_messages
 
     # ✅ Delete the user's command message
     try:
         await ctx.message.delete()
     except discord.NotFound:
         logging.warning("⚠️ Warning: Command message was already deleted.")
+
