@@ -2,7 +2,19 @@ import time
 import discord
 import config
 import logging
+import aiohttp
+import io
 from utils.helpers import load_items
+
+async def repost_image(ctx, attachment):
+    """Downloads and re-uploads an image properly to prevent embed issues."""
+    async with aiohttp.ClientSession() as session:
+        async with session.get(attachment.url) as resp:
+            if resp.status == 200:
+                image_data = await resp.read()
+                file = discord.File(io.BytesIO(image_data), filename=attachment.filename)
+                return file
+    return None
 
 async def cd(bot, ctx, *args):
     """Handles event creation and tracking with optional images and negative time adjustments."""
