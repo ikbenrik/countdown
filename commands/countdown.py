@@ -93,9 +93,9 @@ async def cd(bot, ctx, *args):
     countdown_time = int(time.time()) + max(0, duration - negative_offset)  # ✅ Adjust time
 
     # ✅ Capture image attachment if provided
-    image_url = None
+    image_file = None
     if ctx.message.attachments:
-        image_url = ctx.message.attachments[0].url  # Take the first attached image
+        image_file = await repost_image(ctx, ctx.message.attachments[0])  # ✅ Re-upload instead of embedding
 
     # ✅ Determine rarity color dynamically
     if rarity:
