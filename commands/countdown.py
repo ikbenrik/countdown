@@ -18,85 +18,55 @@ async def repost_image(ctx, attachment):
 
 async def cd(bot, ctx, *args):
     """Handles event creation and tracking with optional images and negative time adjustments."""
-
-    # ✅ If no arguments, send error message and delete user command
-    if len(args) < 1:
-        error_message = await ctx.send("❌ **Invalid format!** Use `!cd <item> [rarity/amount] [time] [-X minutes]`.")
-        await error_message.add_reaction("🗑️")  # ✅ Add trash bin reaction
-        try:
-            await ctx.message.delete()  # ✅ Delete user command
-        except discord.NotFound:
-            logging.warning("⚠️ Command message was already deleted.")
-        return
-
+    
     item_name = args[0].lower().strip()
     duration = None
-    rarity = None  # ✅ Default: No rarity
-    amount = 1  # ✅ Default: 1 (if no amount is provided)
-    negative_offset = 0  # Default: No negative offset
+    rarity = None
+    amount = 1
+    negative_offset = 0
     duration_mapping = {"h": 3600, "m": 60, "s": 1}
 
-# ✅ Fix: First, separate rarity+amount from duration
-parsed_duration = None
-parsed_rarity = None
-parsed_amount = 1  # Default: 1
-negative_offset = 0  # Default: No negative offset
+    # ✅ Parse Arguments
+    for arg in args[1:]:
+        arg = arg.lower()
 
-for arg in args[1:]:
-    arg = arg.lower()
+        if arg[-1] in duration_mapping and arg[:-1].isdigit():
+            if duration is None:
+                duration = int(arg[:-1]) * duration_mapping[arg[-1]]
+            else:
+                logging.warning(f"⚠️ Ignored extra duration: {arg}")
+            continue
 
-    # ✅ Check if argument is a duration (e.g., 3h, 5h)
-    if arg[-1] in duration_mapping and arg[:-1].isdigit():
-        if parsed_duration is None:  # Only set the first duration found
-            parsed_duration = int(arg[:-1]) * duration_mapping[arg[-1]]
-        else:
-            logging.warning(f"⚠️ Ignored extra duration: {arg}")
-        continue
+        if any(c in "curhel" for c in arg) and any(c.isdigit() for c in arg):
+            rarity_letter = next(c for c in arg if c in "curhel")
+            amount_digits = "".join(filter(str.isdigit, arg))
+            rarity = rarity_letter
+            amount = int(amount_digits) if amount_digits else 1
+            continue
 
-    # ✅ Check if argument is a rarity + amount (e.g., "5h" = 5 heroic)
-    if any(c in "curhel" for c in arg) and any(c.isdigit() for c in arg):
-        rarity_letter = next(c for c in arg if c in "curhel")
-        amount_digits = "".join(filter(str.isdigit, arg))
-        parsed_rarity = rarity_letter
-        parsed_amount = int(amount_digits) if amount_digits else 1
-        continue
+        if arg in "curhel":
+            rarity = arg
+            continue
 
-    # ✅ Check if argument is just a rarity (e.g., "h" for heroic)
-    if arg in "curhel":
-        parsed_rarity = arg
-        continue
+        if arg.isdigit():
+            amount = int(arg)
+            continue
 
-    # ✅ Check if argument is just an amount (e.g., "5")
-    if arg.isdigit():
-        parsed_amount = int(arg)
-        continue
+        if arg.startswith("-") and arg[1:].isdigit():
+            negative_offset = int(arg[1:]) * 60
+            continue
 
-    # ✅ Check for negative time offset (-X minutes)
-    if arg.startswith("-") and arg[1:].isdigit():
-        negative_offset = int(arg[1:]) * 60  # Convert minutes to seconds
-        continue
-
-    # ✅ Set final values
-    if parsed_duration is not None:
-        duration = parsed_duration
-    if parsed_rarity:
-        rarity = parsed_rarity
-    amount = parsed_amount  # Default: 1 if no amount was set
     # ✅ Load stored items before checking
     item_timers = load_items()
 
-    # ✅ If no duration provided, try using stored duration
+    # ✅ If no duration is provided, use stored duration
     if duration is None:
         if item_name in item_timers:
             duration = item_timers[item_name]
         else:
             error_message = await ctx.send(f"❌ **{item_name.capitalize()}** is not stored! Use `!cd {item_name} <time>` first.")
-            try:
-                await error_message.add_reaction("🗑️")  # ✅ Add trash bin reaction
-            except discord.Forbidden:
-                logging.warning("🚫 Bot does not have permission to add reactions to messages!")
-            
-            # ✅ Delete user command message
+            await error_message.add_reaction("🗑️")  # ✅ Add trash bin reaction
+
             try:
                 await ctx.message.delete()
             except discord.NotFound:
