@@ -120,13 +120,11 @@ async def cd(bot, ctx, *args):
 
     if original_duration % 3600 != 0:
         countdown_text += f" {original_duration % 3600 // 60}m"
-
+    
     if image_file:
-        message = await ctx.send(countdown_text, file=image_file)  # ✅ Send image as file
+        message = await ctx.send(countdown_text, file=image_file)  # ✅ Send image as a file
     else:
         message = await ctx.send(countdown_text)  # ✅ Send message without an image
-    
-    message = await ctx.send(countdown_text, embed=embed if image_url else None)
 
     # ✅ Always add reset and delete reactions
     await message.add_reaction("✅")  # Reset event
