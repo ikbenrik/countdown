@@ -80,8 +80,12 @@ async def cd(bot, ctx, *args):
     countdown_time = int(time.time()) + max(0, duration - negative_offset)  # ✅ Adjust time
 
     image_url = None
+    file = None
+
+    # ✅ Store the actual attachment file instead of just the URL
     if ctx.message.attachments:
-        image_url = ctx.message.attachments[0].url  # ✅ Store the image URL instead of re-uploading
+        file = await ctx.message.attachments[0].to_file()  # ✅ Store as a file
+        image_url = ctx.message.attachments[0].url
 
     # ✅ Determine rarity color dynamically
     if rarity:
