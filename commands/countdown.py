@@ -122,7 +122,7 @@ async def cd(bot, ctx, *args):
         countdown_text += f" {original_duration % 3600 // 60}m"
 
     if image_file:
-        message = await ctx.send(countdown_text, file=image_file)  # ✅ Attach image as a file
+        message = await ctx.send(countdown_text, file=image_file if image_file else None)
     else:
         message = await ctx.send(countdown_text)
     
