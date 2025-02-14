@@ -109,11 +109,14 @@ async def handle_reaction(bot, payload):
         reset_reactions = list(config.GATHERING_CHANNELS.keys())  # ✅ After claiming, sharing should be available
         logging.info(f"📌 Event claimed, replaced `📥` with sharing reactions.")
 
-    embed = discord.Embed()
-    if image_url:
-        embed.set_image(url=image_url)
+    new_message = None
 
-    new_message = await channel.send(event_text, embed=embed if image_url else None)
+    if image_url:
+        embed = discord.Embed()
+        embed.set_image(url=image_url)
+        new_message = await channel.send(event_text, embed=embed)
+    else:
+        new_message = await channel.send(event_text)
 
     # ✅ Always add Reset, Delete, and Bell Reactions
     await new_message.add_reaction("✅")
