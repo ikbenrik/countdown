@@ -31,8 +31,8 @@ async def remove_ping_reaction(bot, payload):
     """Removes users from the ping list when they remove their 🔔 reaction."""
     logging.debug(f"🔕 Removing ping reaction: {payload.emoji.name} by {payload.user_id}")
 
-    if payload.emoji.name != "🔔":  # Only remove if it's the bell reaction
-        return
+    if payload.emoji.name != "🔔":
+        return  # ✅ Only remove if it's the bell reaction
 
     message_id = payload.message_id
 
