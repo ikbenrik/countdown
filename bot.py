@@ -8,8 +8,6 @@ from events.ping_manager import schedule_pings  # ✅ Fixed Import
 import asyncio
 import logging
 
-bosses_data = load_bosses()
-
 # ✅ Reset logging completely
 logging.basicConfig(
     level=logging.DEBUG,  # 🔥 Set to DEBUG mode
