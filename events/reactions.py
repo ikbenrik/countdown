@@ -97,7 +97,7 @@ async def handle_reaction(bot, payload):
             reset_reactions = ["📥"]  # ✅ After sharing, only claim should be available
             logging.info(f"📌 Event moved to `{new_channel_name}`, replaced share options with `📥`.")
 
-    # ✅ Claim Event (Moves to Personal Channel & Enables Sharing)
+   # ✅ Claim Event (Moves to Personal Channel & Enables Sharing)
     elif reaction_emoji == "📥":
         user_channel_name = user.display_name.lower().replace(" ", "-")
         personal_category = next((cat for cat in guild.categories if cat.name.lower() == "personal intel"), None)
@@ -110,7 +110,7 @@ async def handle_reaction(bot, payload):
         if not user_channel:
             user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
 
-        # ✅ Preserve the actual remaining time when claiming
+         # ✅ Preserve the actual remaining time when claiming
         current_time = int(time.time())
         actual_remaining_time = max(0, (int(message.created_at.timestamp()) + remaining_duration) - current_time)
         new_spawn_time = current_time + actual_remaining_time  # ✅ Keep correct countdown time
@@ -129,7 +129,7 @@ async def handle_reaction(bot, payload):
 
         file = None
         if message.attachments:
-            file = await message.attachments[0].to_file()
+        file = await message.attachments[0].to_file()
 
         # ✅ Send the new event message with the corrected remaining time
         if file:
@@ -137,13 +137,19 @@ async def handle_reaction(bot, payload):
         else:
             new_message = await channel.send(event_text)
 
-        # ✅ Add reactions to the new event
-        await new_message.add_reaction("✅")
-        await new_message.add_reaction("🗑️")
-        await new_message.add_reaction("🔔")
+        # ✅ Wait a moment before adding reactions to prevent rate limits
+        await asyncio.sleep(0.5)  # ✅ Gives Discord API a short delay to process message creation
 
-        for emoji in reset_reactions:
-            await new_message.add_reaction(emoji)
+        # ✅ Add reactions to the new event
+        try:
+            await new_message.add_reaction("✅")
+            await new_message.add_reaction("🗑️")
+            await new_message.add_reaction("🔔")
+
+            for emoji in reset_reactions:
+                await new_message.add_reaction(emoji)
+        except discord.HTTPException:
+            logging.warning("⚠️ Failed to add reactions, possibly due to rate limits.")
 
         # ✅ Store the event with the correct remaining time
         bot.messages_to_delete[new_message.id] = (
