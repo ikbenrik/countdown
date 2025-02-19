@@ -39,6 +39,8 @@ async def on_ready():
         bot.messages_to_delete = {}  # ✅ Ensure message tracking works
     if not hasattr(bot, "list_messages_to_delete"):
         bot.list_messages_to_delete = []  # ✅ Ensure list message tracking works
+    if not hasattr(bot, "error_messages"):
+        bot.error_messages = {}  # ✅ Ensure error message tracking works
 
     print(f"✅ Logged in as {bot.user}")
     print("✅ Bot is running and ready for reactions!")
@@ -63,6 +65,21 @@ async def on_raw_reaction_add(payload):
         except discord.NotFound:
             return  # ✅ Message was already deleted
 
+        # ✅ Check if this is an error message needing deletion
+        if message.id in bot.error_messages:
+            user_message = bot.error_messages.pop(message.id, None)
+            if user_message:
+                try:
+                    await user_message.delete()
+                except discord.NotFound:
+                    pass  # ✅ User's command message already deleted
+            
+            try:
+                await message.delete()  # ✅ Delete the error message itself
+            except discord.NotFound:
+                pass
+            return
+        
         # ✅ Ensure `list_messages_to_delete` exists
         if not hasattr(bot, "list_messages_to_delete"):
             bot.list_messages_to_delete = []
@@ -89,6 +106,7 @@ async def command_cd(ctx, *args):
     if not args:
         error_message = await ctx.send("❌ **Invalid Usage!** Please use `!cd <item_name> <time>`.")
         await error_message.add_reaction("🗑️")  # ✅ Add trash bin reaction
+        bot.error_messages[error_message.id] = ctx.message  # ✅ Store error to delete later
         return
 
     await cd(bot, ctx, *args)  # ✅ Now correctly passing both bot and ctx
