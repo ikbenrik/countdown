@@ -44,7 +44,7 @@ async def on_ready():
     print("✅ Bot is running and ready for reactions!")
     
     # ✅ Debugging: List loaded commands
-    print("✅ Loaded commands:", list(bot.commands.keys()))
+    print("✅ Loaded commands:", [cmd.name for cmd in bot.commands])
 
     # ✅ Start the ping scheduler
     bot.loop.create_task(schedule_pings(bot))
