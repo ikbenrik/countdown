@@ -26,7 +26,10 @@ intents.message_content = True
 intents.reactions = True  
 intents.messages = True  
 intents.guilds = True  
-intents.members = True  
+intents.members = True
+
+# ✅ Initialize bot (This was missing!)
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_raw_reaction_add(payload):
