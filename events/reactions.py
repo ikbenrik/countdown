@@ -129,7 +129,7 @@ async def handle_reaction(bot, payload):
 
         file = None
         if message.attachments:
-        file = await message.attachments[0].to_file()
+            file = await message.attachments[0].to_file()
 
         # ✅ Send the new event message with the corrected remaining time
         if file:
