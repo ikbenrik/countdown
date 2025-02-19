@@ -22,8 +22,9 @@ async def cd(bot, ctx, *args):
     if not args:
         error_message = await ctx.send("❌ **Error:** You must specify an item name and time! Example: `!cd willow 2h`")
         await error_message.add_reaction("🗑️")
-        bot.error_messages[error_message.id] = ctx.message
+        bot.error_messages[error_message.id] = ctx.message  # ✅ Store error message & user's command
         return
+
     item_name = args[0].lower().strip()
     duration = None
     rarity = None
@@ -40,7 +41,6 @@ async def cd(bot, ctx, *args):
                 duration = int(arg[:-1]) * duration_mapping[arg[-1]]
             else:
                 logging.warning(f"⚠️ Ignored extra duration: {arg}")
-            duration = int(arg[:-1]) * duration_mapping[arg[-1]]
             continue
 
         if any(c in "curhel" for c in arg) and any(c.isdigit() for c in arg):
@@ -72,16 +72,8 @@ async def cd(bot, ctx, *args):
         else:
             error_message = await ctx.send(f"❌ **{item_name.capitalize()}** is not stored! Use `!cd {item_name} <time>` first.")
             await error_message.add_reaction("🗑️")  # ✅ Add trash bin reaction
-            try:
-                await ctx.message.delete()
-            except discord.NotFound:
-                logging.warning("⚠️ Command message was already deleted.")
-            except discord.Forbidden:
-                logging.warning("🚫 Bot does not have permission to delete messages!")
+            bot.error_messages[error_message.id] = ctx.message  # ✅ Store error message & user's command
             return  # ✅ Stop execution if item is not found
-            await error_message.add_reaction("🗑️")
-            bot.error_messages[error_message.id] = ctx.message
-            return
 
     original_duration = duration  # ✅ Store original full duration for resets
     countdown_time = int(time.time()) + max(0, duration - negative_offset)  # ✅ Adjust time
@@ -104,7 +96,7 @@ async def cd(bot, ctx, *args):
 
     # ✅ Build countdown message
     countdown_text = (
-        f"{color} **{amount_display}{rarity_display}{item_name.capitalize()}** {color}\n"  # ✅ Displays "5x Rare Lion"
+        f"{color} **{amount_display}{rarity_display}{item_name.capitalize()}** {color}\n"
         f"👤 **Posted by: {ctx.author.display_name}**\n"
         f"⏳ **Next spawn at** <t:{countdown_time}:F>\n"
         f"⏳ **Countdown:** <t:{countdown_time}:R>\n"
@@ -137,12 +129,3 @@ async def cd(bot, ctx, *args):
         item_name.capitalize(), rarity_name, color, amount, ctx.channel.id, ctx.author.display_name,
         image_file  # ✅ Store the actual image file for reuse!
     )
-
-
-    # ✅ Delete the user command message (if exists)
-    try:
-        await ctx.message.delete()
-    except discord.NotFound:
-        logging.warning("⚠️ Command message was already deleted.")
-    except discord.Forbidden:
-        logging.warning("🚫 Bot does not have permission to delete messages in this channel!")
