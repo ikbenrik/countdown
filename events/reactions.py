@@ -98,58 +98,58 @@ async def handle_reaction(bot, payload):
             logging.info(f"📌 Event moved to `{new_channel_name}`, replaced share options with `📥`.")
 
     # ✅ Claim Event (Moves to Personal Channel & Enables Sharing)
-elif reaction_emoji == "📥":
-    user_channel_name = user.display_name.lower().replace(" ", "-")
-    personal_category = next((cat for cat in guild.categories if cat.name.lower() == "personal intel"), None)
+    elif reaction_emoji == "📥":
+        user_channel_name = user.display_name.lower().replace(" ", "-")
+        personal_category = next((cat for cat in guild.categories if cat.name.lower() == "personal intel"), None)
 
-    if not personal_category:
-        return
+        if not personal_category:
+            return
 
-    user_channel = discord.utils.get(guild.text_channels, name=user_channel_name, category=personal_category)
+        user_channel = discord.utils.get(guild.text_channels, name=user_channel_name, category=personal_category)
 
-    if not user_channel:
-        user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
+        if not user_channel:
+            user_channel = await guild.create_text_channel(name=user_channel_name, category=personal_category)
 
-    # ✅ Preserve the actual remaining time when claiming
-    current_time = int(time.time())
-    actual_remaining_time = max(0, (int(message.created_at.timestamp()) + remaining_duration) - current_time)
-    new_spawn_time = current_time + actual_remaining_time  # ✅ Keep correct countdown time
+        # ✅ Preserve the actual remaining time when claiming
+        current_time = int(time.time())
+        actual_remaining_time = max(0, (int(message.created_at.timestamp()) + remaining_duration) - current_time)
+        new_spawn_time = current_time + actual_remaining_time  # ✅ Keep correct countdown time
 
-    event_text = (
-        f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
-        f"👤 **Claimed by: {user.display_name}**\n"
-        f"⏳ **Next spawn at** <t:{new_spawn_time}:F>\n"
-        f"⏳ **Countdown:** <t:{new_spawn_time}:R>\n"
-        f"⏳ **Interval: {original_duration//60}m**"
-    )
+        event_text = (
+            f"{color} **{amount}x {rarity_name} {item_name}** {color}\n"
+            f"👤 **Claimed by: {user.display_name}**\n"
+            f"⏳ **Next spawn at** <t:{new_spawn_time}:F>\n"
+            f"⏳ **Countdown:** <t:{new_spawn_time}:R>\n"
+            f"⏳ **Interval: {original_duration//60}m**"
+        )
 
-    channel = user_channel
-    reset_reactions = list(config.GATHERING_CHANNELS.keys())  # ✅ After claiming, sharing should be available
-    logging.info(f"📌 Event claimed, replaced `📥` with sharing reactions.")
+        channel = user_channel
+        reset_reactions = list(config.GATHERING_CHANNELS.keys())  # ✅ After claiming, sharing should be available
+        logging.info(f"📌 Event claimed, replaced `📥` with sharing reactions.")
 
-    file = None
-    if message.attachments:
-        file = await message.attachments[0].to_file()
+        file = None
+        if message.attachments:
+            file = await message.attachments[0].to_file()
 
-    # ✅ Send the new event message with the corrected remaining time
-    if file:
-        new_message = await channel.send(event_text, file=file)  # ✅ Uploads the image again
-    else:
-        new_message = await channel.send(event_text)
+        # ✅ Send the new event message with the corrected remaining time
+        if file:
+            new_message = await channel.send(event_text, file=file)  # ✅ Uploads the image again
+        else:
+            new_message = await channel.send(event_text)
 
-    # ✅ Add reactions to the new event
-    await new_message.add_reaction("✅")
-    await new_message.add_reaction("🗑️")
-    await new_message.add_reaction("🔔")
+        # ✅ Add reactions to the new event
+        await new_message.add_reaction("✅")
+        await new_message.add_reaction("🗑️")
+        await new_message.add_reaction("🔔")
 
-    for emoji in reset_reactions:
-        await new_message.add_reaction(emoji)
+        for emoji in reset_reactions:
+            await new_message.add_reaction(emoji)
 
-    # ✅ Store the event with the correct remaining time
-    bot.messages_to_delete[new_message.id] = (
-        new_message, original_duration, actual_remaining_time, negative_adjustment,
-        item_name.capitalize(), rarity_name, color, amount, channel.id, creator_name,
-        file
-    )
+        # ✅ Store the event with the correct remaining time
+        bot.messages_to_delete[new_message.id] = (
+            new_message, original_duration, actual_remaining_time, negative_adjustment,
+            item_name.capitalize(), rarity_name, color, amount, channel.id, creator_name,
+            file
+        )
 
-    await message.delete()  # ✅ Remove old message
+        await message.delete()  # ✅ Remove old message
