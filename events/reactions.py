@@ -50,8 +50,6 @@ async def handle_reaction(bot, payload):
 
     # ✅ Preserve the actual remaining time when claiming
     current_time = int(time.time())
-    actual_remaining_time = max(0, (int(message.created_at.timestamp()) + remaining_duration) - current_time)
-    new_spawn_time = current_time + actual_remaining_time  # ✅ Keep correct countdown time
 
 
     # ✅ If sharing (🌿, 🌲, ⛏️), or claim (📥), reset the full timer
