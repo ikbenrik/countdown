@@ -7,7 +7,6 @@ from commands.items import add_item, remove_item, list_items  # ✅ Import all i
 from events.ping_manager import schedule_pings  # ✅ Fixed Import
 import asyncio
 import logging
-from commands.bosses import add_boss, get_bosses, list_all_bosses, find_boss, bosses_data, load_bosses
 
 bosses_data = load_bosses()
 
@@ -30,107 +29,6 @@ intents.reactions = True
 intents.messages = True  
 intents.guilds = True  
 intents.members = True  
-
-# ✅ Initialize bot
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-@bot.command(name="b")
-async def command_b(ctx, action: str = None, dungeon: str = None, boss_name: str = None, time: str = None):
-    """Handles boss & dungeon management or listing."""
-
-    if action is None:
-        await list_all_bosses(ctx)
-
-    # ✅ **Try to delete the user’s command message**
-    try:
-        await ctx.message.delete()
-    except discord.NotFound:
-        print("⚠️ Warning: Command message was already deleted.")
-    except discord.Forbidden:
-        print("🚫 Bot does not have permission to delete messages in this channel!")
-        return
-
-    if action.lower() == "list":
-        await list_all_bosses(ctx)
-        return  # 🚀 **Ensure it stops execution after listing**
-
-    # ✅ **Try to delete the user’s command message**
-    try:
-        await ctx.message.delete()
-    except discord.NotFound:
-        print("⚠️ Warning: Command message was already deleted.")
-    except discord.Forbidden:
-        print("🚫 Bot does not have permission to delete messages in this channel!")
-        return
- 
-    if action.lower() == "add":
-        if not dungeon:
-            error_msg = await ctx.send("❌ **You must specify a dungeon!** Use `!b add <dungeon>` or `!b add <dungeon> <boss> <time>`.")
-            await error_msg.add_reaction("🗑️")
-            
-            try:
-                await ctx.message.delete()
-            except discord.NotFound:
-                print("⚠️ Warning: Command message was already deleted.")
-            except discord.Forbidden:
-                print("🚫 Bot does not have permission to delete messages in this channel!")
-            return
-            
-        await add_boss(ctx, dungeon, boss_name, time)
-
-    try:
-        await ctx.message.delete()
-    except discord.NotFound:
-        print("⚠️ Warning: Command message was already deleted.")
-    except discord.Forbidden:
-        print("🚫 Bot does not have permission to delete messages in this channel!")
-        return
-
-    # ✅ First, check if it's a dungeon
-    found_dungeon = action.lower() in bosses_data
-    if found_dungeon:
-        await get_bosses(ctx, action)  # ✅ Create events for all bosses in that dungeon
-        return  # ✅ Prevent looping
-
-    # ✅ If it's NOT a dungeon, check if it's a boss
-    found_boss = await find_boss(ctx, action)
-    if found_boss:
-        return  # ✅ Prevent looping
-
-    # ❌ If neither a dungeon nor a boss is found
-    error_msg = await ctx.send(f"❌ **Dungeon or Boss `{action.capitalize()}` not found!** Try `!b list` to see all available options.")
-    await error_msg.add_reaction("🗑️")
-
-    found_boss = await find_boss(ctx, action)  
-    if found_boss:
-        return
-
-    await get_bosses(ctx, action)
-
-    found_boss = await find_boss(ctx, action)  # ✅ Check if it's a boss
-    if found_boss:
-        return
-
-    await ctx.send("❌ **Invalid command!**")
-
-    if action and dungeon is None and boss_name is None and time is None:
-        found_dungeon = await get_bosses(ctx, action)  # ✅ Check if it's a dungeon
-        if not found_dungeon:
-            found_boss = await find_boss(ctx, action)  # ✅ Check if it's a boss
-            if not found_boss:
-                error_msg = await ctx.send(f"❌ **Dungeon or Boss `{action.capitalize()}` not found!** Use `!b add <dungeon>` to create one.")
-                await error_msg.add_reaction("🗑️")
-        return
-
-    error_msg = await ctx.send("❌ **Invalid command!** Use `!b add <dungeon> [boss] [time]`, `!b list` to list everything, or `!b <dungeon>` to create events for bosses.")
-    await error_msg.add_reaction("🗑️")
-
-    if action and dungeon is None and boss_name is None and time is None:
-        await get_bosses(ctx, action)  # ✅ Use the first argument as the dungeon name
-        return
-
-    error_msg = await ctx.send("❌ **Invalid command!** Use `!b add <dungeon> [boss] [time]`, `!b list` to list everything, or `!b <dungeon>` to create events for bosses.")
-    await error_msg.add_reaction("🗑️")
 
 @bot.event
 async def on_raw_reaction_add(payload):
