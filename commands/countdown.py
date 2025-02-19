@@ -19,6 +19,12 @@ async def repost_image(ctx, attachment):
 async def cd(bot, ctx, *args):
     """Handles event creation and tracking with optional images and negative time adjustments."""
     
+    if not args:
+        error_message = await ctx.send("❌ **Error:** You must specify an item name and time! Example: `!cd willow 2h`")
+        await error_message.add_reaction("🗑️")
+        bot.error_messages[error_message.id] = ctx.message
+        return
+
     item_name = args[0].lower().strip()
     duration = None
     rarity = None
@@ -31,10 +37,7 @@ async def cd(bot, ctx, *args):
         arg = arg.lower()
 
         if arg[-1] in duration_mapping and arg[:-1].isdigit():
-            if duration is None:
-                duration = int(arg[:-1]) * duration_mapping[arg[-1]]
-            else:
-                logging.warning(f"⚠️ Ignored extra duration: {arg}")
+            duration = int(arg[:-1]) * duration_mapping[arg[-1]]
             continue
 
         if any(c in "curhel" for c in arg) and any(c.isdigit() for c in arg):
@@ -56,7 +59,6 @@ async def cd(bot, ctx, *args):
             negative_offset = int(arg[1:]) * 60
             continue
 
-    # ✅ Load stored items before checking
     item_timers = load_items()
 
     # ✅ If no duration is provided, use stored duration
@@ -65,16 +67,9 @@ async def cd(bot, ctx, *args):
             duration = item_timers[item_name]
         else:
             error_message = await ctx.send(f"❌ **{item_name.capitalize()}** is not stored! Use `!cd {item_name} <time>` first.")
-            await error_message.add_reaction("🗑️")  # ✅ Add trash bin reaction
-
-            try:
-                await ctx.message.delete()
-            except discord.NotFound:
-                logging.warning("⚠️ Command message was already deleted.")
-            except discord.Forbidden:
-                logging.warning("🚫 Bot does not have permission to delete messages!")
-
-            return  # ✅ Stop execution if item is not found
+            await error_message.add_reaction("🗑️")
+            bot.error_messages[error_message.id] = ctx.message
+            return
 
     original_duration = duration  # ✅ Store original full duration for resets
     countdown_time = int(time.time()) + max(0, duration - negative_offset)  # ✅ Adjust time
