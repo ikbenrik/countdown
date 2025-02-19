@@ -28,12 +28,12 @@ intents.messages = True
 intents.guilds = True  
 intents.members = True
 
-# ✅ Initialize bot (This was missing!)
+# ✅ Initialize bot
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_raw_reaction_add(payload):
-    """Handles reaction events, including bulk deletion for !list messages."""
+    """Handles reaction events, including bulk deletion for !list and error messages."""
     print(f"🔎 DEBUG: Reaction detected: {payload.emoji.name} by User ID {payload.user_id}")
 
     if payload.emoji.name == "🗑️":
@@ -45,62 +45,45 @@ async def on_raw_reaction_add(payload):
         except discord.NotFound:
             return  # ✅ Message was already deleted
 
-        # ✅ Ensure `list_messages_to_delete` exists
-        if not hasattr(bot, "list_messages_to_delete"):
-            bot.list_messages_to_delete = []
-
-        # ✅ Check if the message is from the bot and is part of the !list output
-        if bot.list_messages_to_delete and message.id in [msg.id for msg in bot.list_messages_to_delete]:
+        # ✅ Delete messages from !list or error handling
+        if hasattr(bot, "list_messages_to_delete") and message.id in [msg.id for msg in bot.list_messages_to_delete]:
             for msg in bot.list_messages_to_delete:
                 try:
                     await msg.delete()
                 except discord.NotFound:
-                    continue  # ✅ Skip if already deleted
+                    continue
                 except discord.Forbidden:
                     print("🚫 Bot does not have permission to delete messages!")
                     return
-            bot.list_messages_to_delete = []  # ✅ Clear the list after deletion
+            bot.list_messages_to_delete = []
             return
+
+        # ✅ Handle deleting error messages and original wrong commands
+        if hasattr(bot, "error_messages") and message.id in bot.error_messages:
+            command_message = bot.error_messages[message.id]
+            try:
+                await command_message.delete()  # ✅ Delete the original command
+                await message.delete()  # ✅ Delete the error message
+                del bot.error_messages[message.id]  # ✅ Remove from tracking
+            except discord.NotFound:
+                pass
+            except discord.Forbidden:
+                print("🚫 Bot lacks permissions to delete error messages!")
 
     # ✅ Handle other reactions normally
     await handle_reaction(bot, payload)
-
-@bot.command(name="cd")
-async def command_cd(ctx, *args):
-    """Handles event creation with `!cd` command."""
-    await cd(bot, ctx, *args)  # ✅ Now correctly passing both bot and ctx
-    try:
-        await ctx.message.delete()  # ✅ Deletes the command message
-    except discord.NotFound:
-        print("⚠️ Warning: Command message was already deleted.")
-
-@bot.command(name="list")
-async def command_list(ctx):
-    """Handles listing all items via `!list`"""
-    await list_items(ctx)
-    try:
-        await ctx.message.delete()  # ✅ Delete the user command after execution
-    except discord.NotFound:
-        print("⚠️ Warning: Command message was already deleted.")
-
-@bot.command(name="add")
-async def command_add(ctx, item_name: str, duration: str):
-    """Handles adding items via `!add`"""
-    await add_item(ctx, item_name, duration)
-
-@bot.command(name="del")
-async def command_del(ctx, item_name: str):
-    """Handles deleting items via `!del`"""
-    await remove_item(ctx, item_name)
 
 @bot.event
 async def on_ready():
     """Ensures the bot is ready and starts background tasks."""
     if not hasattr(bot, "messages_to_delete"):
-        bot.messages_to_delete = {}  # ✅ Ensure message tracking works
+        bot.messages_to_delete = {}
 
     if not hasattr(bot, "list_messages_to_delete"):
-        bot.list_messages_to_delete = []  # ✅ Ensure list message tracking works
+        bot.list_messages_to_delete = []
+
+    if not hasattr(bot, "error_messages"):
+        bot.error_messages = {}  # ✅ Track error messages
 
     print(f"✅ Logged in as {bot.user}")
     print("✅ Bot is running and ready for reactions!")
