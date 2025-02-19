@@ -100,6 +100,22 @@ async def on_raw_reaction_add(payload):
     # ✅ Handle other reactions normally
     await handle_reaction(bot, payload)
 
+@bot.event
+async def on_raw_reaction_remove(payload):
+    """Handles reaction removals, including removing users from pings."""
+    print(f"🔎 DEBUG: Reaction removed: {payload.emoji.name} by User ID {payload.user_id}")
+
+    if payload.emoji.name == "🔔":
+        guild = bot.get_guild(payload.guild_id)
+        user = guild.get_member(payload.user_id)
+
+        if not user or user.bot:
+            return  # ✅ Ignore bots
+
+        await remove_ping_reaction(bot, payload)  # ✅ Remove user from the ping list
+        logging.info(f"❌ {user.display_name} removed from pings for event {payload.message_id}")
+
+
 @bot.command(name="cd")
 async def command_cd(ctx, *args):
     """Handles event creation with `!cd` command."""
