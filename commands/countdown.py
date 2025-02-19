@@ -1,136 +1,138 @@
-import time
 import discord
+from discord.ext import commands
 import config
+from commands.countdown import cd
+from commands.items import add_item, remove_item, list_items  # ✅ Import all item commands
+from events.reactions import handle_reaction
+from events.ping_manager import schedule_pings  # ✅ Fixed Import
+import asyncio
 import logging
-import aiohttp
-import io
-from utils.helpers import load_items
 
-async def repost_image(ctx, attachment):
-    """Downloads and re-uploads an image properly to prevent embed issues."""
-    async with aiohttp.ClientSession() as session:
-        async with session.get(attachment.url) as resp:
-            if resp.status == 200:
-                image_data = await resp.read()
-                file = discord.File(io.BytesIO(image_data), filename=attachment.filename)
-                return file
-    return None
+# ✅ Reset logging completely
+logging.basicConfig(
+    level=logging.DEBUG,  # 🔥 Set to DEBUG mode
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("bot_debug.log"),  # ✅ Save logs in a separate file
+        logging.StreamHandler()  # ✅ Print logs in the terminal
+    ]
+)
 
-async def cd(bot, ctx, *args):
-    """Handles event creation and tracking with optional images and negative time adjustments."""
+logging.info("🚀 Bot is starting...")
+
+# ✅ Setup bot intents
+intents = discord.Intents.default()
+intents.message_content = True
+intents.reactions = True  
+intents.messages = True  
+intents.guilds = True  
+intents.members = True
+
+# ✅ Initialize bot
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+@bot.event
+async def on_ready():
+    """Ensures the bot is ready and starts background tasks."""
     
-    if not args:
-        error_message = await ctx.send("❌ **Error:** You must specify an item name and time! Example: `!cd willow 2h`")
-        await error_message.add_reaction("🗑️")
-        bot.error_messages[error_message.id] = ctx.message
-        return
+    if not hasattr(bot, "messages_to_delete"):
+        bot.messages_to_delete = {}  # ✅ Ensure message tracking works
+    if not hasattr(bot, "list_messages_to_delete"):
+        bot.list_messages_to_delete = []  # ✅ Ensure list message tracking works
+    if not hasattr(bot, "error_messages"):
+        bot.error_messages = {}  # ✅ Ensure error message tracking works
 
-    item_name = args[0].lower().strip()
-    duration = None
-    rarity = None
-    amount = 1
-    negative_offset = 0
-    duration_mapping = {"h": 3600, "m": 60, "s": 1}
+    print(f"✅ Logged in as {bot.user}")
+    print("✅ Bot is running and ready for reactions!")
+    
+    # ✅ Debugging: List loaded commands
+    print("✅ Loaded commands:", [cmd.name for cmd in bot.commands])
 
-    # ✅ Parse Arguments
-    for arg in args[1:]:
-        arg = arg.lower()
+    # ✅ Start the ping scheduler
+    bot.loop.create_task(schedule_pings(bot))
 
-        if arg[-1] in duration_mapping and arg[:-1].isdigit():
-            duration = int(arg[:-1]) * duration_mapping[arg[-1]]
-            continue
+@bot.event
+async def on_raw_reaction_add(payload):
+    """Handles reaction events, including bulk deletion for !list messages."""
+    print(f"🔎 DEBUG: Reaction detected: {payload.emoji.name} by User ID {payload.user_id}")
 
-        if any(c in "curhel" for c in arg) and any(c.isdigit() for c in arg):
-            rarity_letter = next(c for c in arg if c in "curhel")
-            amount_digits = "".join(filter(str.isdigit, arg))
-            rarity = rarity_letter
-            amount = int(amount_digits) if amount_digits else 1
-            continue
+    if payload.emoji.name == "🗑️":
+        guild = bot.get_guild(payload.guild_id)
+        channel = bot.get_channel(payload.channel_id)
 
-        if arg in "curhel":
-            rarity = arg
-            continue
+        try:
+            message = await channel.fetch_message(payload.message_id)
+        except discord.NotFound:
+            return  # ✅ Message was already deleted
 
-        if arg.isdigit():
-            amount = int(arg)
-            continue
+        # ✅ Check if this is an error message needing deletion
+        if message.id in bot.error_messages:
+            user_message = bot.error_messages.pop(message.id, None)
+            if user_message:
+                try:
+                    await user_message.delete()
+                except discord.NotFound:
+                    pass  # ✅ User's command message already deleted
+            
+            try:
+                await message.delete()  # ✅ Delete the error message itself
+            except discord.NotFound:
+                pass
+            return
+        
+        # ✅ Ensure `list_messages_to_delete` exists
+        if not hasattr(bot, "list_messages_to_delete"):
+            bot.list_messages_to_delete = []
 
-        if arg.startswith("-") and arg[1:].isdigit():
-            negative_offset = int(arg[1:]) * 60
-            continue
-
-    item_timers = load_items()
-
-    # ✅ If no duration is provided, use stored duration
-    if duration is None:
-        if item_name in item_timers:
-            duration = item_timers[item_name]
-        else:
-            error_message = await ctx.send(f"❌ **{item_name.capitalize()}** is not stored! Use `!cd {item_name} <time>` first.")
-            await error_message.add_reaction("🗑️")
-            bot.error_messages[error_message.id] = ctx.message
+        # ✅ Check if the message is from the bot and is part of the !list output
+        if bot.list_messages_to_delete and message.id in [msg.id for msg in bot.list_messages_to_delete]:
+            for msg in bot.list_messages_to_delete:
+                try:
+                    await msg.delete()
+                except discord.NotFound:
+                    continue  # ✅ Skip if already deleted
+                except discord.Forbidden:
+                    print("🚫 Bot does not have permission to delete messages!")
+                    return
+            bot.list_messages_to_delete = []  # ✅ Clear the list after deletion
             return
 
-    original_duration = duration  # ✅ Store original full duration for resets
-    countdown_time = int(time.time()) + max(0, duration - negative_offset)  # ✅ Adjust time
+    # ✅ Handle other reactions normally
+    await handle_reaction(bot, payload)
 
-    image_file = None
+@bot.command(name="cd")
+async def command_cd(ctx, *args):
+    """Handles event creation with `!cd` command."""
+    if not args:
+        error_message = await ctx.send("❌ **Invalid Usage!** Please use `!cd <item_name> <time>`.")
+        await error_message.add_reaction("🗑️")  # ✅ Add trash bin reaction
+        bot.error_messages[error_message.id] = ctx.message  # ✅ Store error to delete later
+        return
 
-    # ✅ If the user uploaded an image, save it as a file
-    if ctx.message.attachments:
-        image_file = await ctx.message.attachments[0].to_file()
-
-    # ✅ Determine rarity color dynamically
-    if rarity:
-        rarity_name, color = config.RARITY_COLORS.get(rarity, ("Rare", "🔵"))  # ✅ Use correct rarity letter
-        rarity_display = f"{rarity_name} "
-        amount_display = f"{amount}x " if amount > 1 else ""
-    else:
-        rarity_name, color = "", "⚪"  # ✅ Default: No rarity name, white dots
-        rarity_display = ""
-        amount_display = f"{amount}x " if amount > 1 else ""  # ✅ Still show amount if > 1
-
-    # ✅ Build countdown message
-    countdown_text = (
-        f"{color} **{amount_display}{rarity_display}{item_name.capitalize()}** {color}\n"  # ✅ Displays "5x Rare Lion"
-        f"👤 **Posted by: {ctx.author.display_name}**\n"
-        f"⏳ **Next spawn at** <t:{countdown_time}:F>\n"
-        f"⏳ **Countdown:** <t:{countdown_time}:R>\n"
-        f"⏳ **Interval:** {original_duration // 3600}h"
-    )
-
-    if original_duration % 3600 != 0:
-        countdown_text += f" {original_duration % 3600 // 60}m"
-    
-    if image_file:
-        message = await ctx.send(countdown_text, file=image_file)  # ✅ Upload image file instead of using embed
-    else:
-        message = await ctx.send(countdown_text)
-
-    # ✅ Always add reset and delete reactions
-    await message.add_reaction("✅")  # Reset event
-    await message.add_reaction("🗑️")  # Delete event
-    await message.add_reaction("🔔")  # ✅ Add ping reaction
-
-    # ✅ Check if the event is in a shared gathering channel
-    if ctx.channel.name in config.GATHERING_CHANNELS.values():
-        await message.add_reaction("📥")  # Add claim reaction in shared channels
-    else:
-        for emoji in config.GATHERING_CHANNELS.keys():
-            await message.add_reaction(emoji)  # ✅ Add sharing reactions (⛏️, 🌲, 🌿)
-
-    # ✅ Store message details, including the original duration and image URL
-    bot.messages_to_delete[message.id] = (
-        message, original_duration, duration - negative_offset, negative_offset,
-        item_name.capitalize(), rarity_name, color, amount, ctx.channel.id, ctx.author.display_name,
-        image_file  # ✅ Store the actual image file for reuse!
-    )
-
-
-    # ✅ Delete the user command message (if exists)
+    await cd(bot, ctx, *args)  # ✅ Now correctly passing both bot and ctx
     try:
-        await ctx.message.delete()
+        await ctx.message.delete()  # ✅ Deletes the command message
     except discord.NotFound:
-        logging.warning("⚠️ Command message was already deleted.")
-    except discord.Forbidden:
-        logging.warning("🚫 Bot does not have permission to delete messages in this channel!")
+        print("⚠️ Warning: Command message was already deleted.")
+
+@bot.command(name="list")
+async def command_list(ctx):
+    """Handles listing all items via `!list`"""
+    await list_items(ctx)
+    try:
+        await ctx.message.delete()  # ✅ Delete the user command after execution
+    except discord.NotFound:
+        print("⚠️ Warning: Command message was already deleted.")
+
+@bot.command(name="add")
+async def command_add(ctx, item_name: str, duration: str):
+    """Handles adding items via `!add`"""
+    await add_item(ctx, item_name, duration)
+
+@bot.command(name="del")
+async def command_del(ctx, item_name: str):
+    """Handles deleting items via `!del`"""
+    await remove_item(ctx, item_name)
+
+# ✅ Start bot
+bot.run(config.TOKEN)
