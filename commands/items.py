@@ -55,6 +55,11 @@ async def add_item(ctx, item_name: str, duration_str: str):
     logging.info(f"✅ Added item: {item_name} with duration {duration_text}")
     response = await ctx.send(f"✅ **Added:** {item_name.capitalize()} - {duration_text}")
     await response.add_reaction("🗑️")
+    # ✅ Delete the user's command message
+    try:
+        await ctx.message.delete()
+    except discord.NotFound:
+        logging.warning("⚠️ Warning: Command message was already deleted.")
 
 async def remove_item(ctx, item_name: str):
     """Removes an item from the list."""
