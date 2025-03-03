@@ -50,16 +50,16 @@ async def handle_reaction(bot, payload):
 
     current_time = int(time.time())
 
-    # ✅ Calculate Remaining Time
+    # ✅ Calculate the actual remaining time based on when the event was created
     elapsed_time = current_time - int(message.created_at.timestamp())
-    actual_remaining_time = max(0, remaining_duration - elapsed_time)  # ✅ Corrected remaining time
+    actual_remaining_time = max(0, (int(message.created_at.timestamp()) + remaining_duration) - current_time)
 
-    # ✅ Reset Timer on Checkmark Reaction
+    # ✅ Correct new spawn time calculation
     if reaction_emoji == "✅":
-        new_spawn_time = current_time + original_duration  # ✅ Reset to full duration
-        remaining_duration = original_duration  # ✅ Forget negative time
+        new_spawn_time = current_time + original_duration  # ✅ Full reset
+        actual_remaining_time = original_duration
     else:
-        new_spawn_time = current_time + actual_remaining_time  # ✅ Keep remaining time
+        new_spawn_time = current_time + actual_remaining_time  # ✅ Keep correct time when sharing or claiming
 
     # ✅ Universal Event Format
     def generate_event_text(actor: str, action: str) -> str:
@@ -73,7 +73,7 @@ async def handle_reaction(bot, payload):
 
     reset_reactions = []  
 
-    # ✅ Reset Event (Restores original interval)
+    # ✅ Reset Event (Restore full event duration)
     if reaction_emoji == "✅":
         await delete_pings_for_event(bot, message.id)
         logging.info(f"🗑️ Pings cleared for event {message.id} due to reset reaction.")
@@ -83,12 +83,10 @@ async def handle_reaction(bot, payload):
 
         if channel.name in config.GATHERING_CHANNELS.values():
             reset_reactions = ["📥", "🔔"]
-            logging.info(f"📌 Event reset in shared channel, adding `📥` and `🔔`.")
         else:
             reset_reactions = list(config.GATHERING_CHANNELS.keys()) + ["🔔"]
-            logging.info(f"📌 Event reset in personal channel, adding sharing options and `🔔`.")
 
-    # ✅ Share Event (Keep Remaining Time)
+    # ✅ Share Event (Keep Correct Remaining Time)
     elif reaction_emoji in config.GATHERING_CHANNELS:
         new_channel_name = config.GATHERING_CHANNELS[reaction_emoji]
         target_channel = discord.utils.get(guild.channels, name=new_channel_name)
@@ -97,9 +95,8 @@ async def handle_reaction(bot, payload):
             event_text = generate_event_text(user.display_name, "Shared")
             channel = target_channel  
             reset_reactions = ["📥"]
-            logging.info(f"📌 Event moved to `{new_channel_name}`, replaced share options with `📥`.")
 
-    # ✅ Claim Event (Keep Remaining Time)
+    # ✅ Claim Event (Keep Correct Remaining Time)
     elif reaction_emoji == "📥":
         user_channel_name = user.display_name.lower().replace(" ", "-")
         personal_category = next((cat for cat in guild.categories if cat.name.lower() == "personal intel"), None)
@@ -115,8 +112,6 @@ async def handle_reaction(bot, payload):
         event_text = generate_event_text(user.display_name, "Claimed")
         channel = user_channel
         reset_reactions = list(config.GATHERING_CHANNELS.keys())
-
-        logging.info(f"📌 Event claimed, replaced `📥` with sharing reactions.")
 
     # ✅ Send the updated event message
     file = None
