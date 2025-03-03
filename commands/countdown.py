@@ -76,7 +76,7 @@ async def cd(bot, ctx, *args):
             return  # ✅ Stop execution if item is not found
 
     original_duration = duration  # ✅ Store original full duration for resets
-    countdown_time = int(time.time()) + max(0, duration - negative_offset)  # ✅ Adjust time
+    countdown_time = int(time.time()) + duration - negative_offset  # ✅ Preserve negative offset
 
     image_file = None
 
