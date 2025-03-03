@@ -28,7 +28,6 @@
     "limestone": 7200,
     "lion": 2100,
     "luma": 7200,
-    "monkeybutt": 1800,
     "moon": 14400,
     "moonbel": 14400,
     "moonbell": 14400,
@@ -45,5 +44,11 @@
     "western larch": 14400,
     "willow": 14400,
     "wyrdstone": 7200,
-    "zinc": 7200
+    "zinc": 7200,
+    "test123": 7200,
+    "spindlevine": 14400,
+    "daff": 14400,
+    "rividium": 7200,
+    "gryphon": 1200,
+    "wyrmling": 2400
 }
