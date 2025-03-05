@@ -12,11 +12,11 @@ import logging
 
 # ✅ Reset logging completely
 logging.basicConfig(
-    level=logging.DEBUG,  # 🔥 Set to DEBUG mode
+    level=logging.INFO,  # 🔥 Lowered from DEBUG to INFO
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.FileHandler("bot_debug.log"),  # ✅ Save logs in a separate file
-        logging.StreamHandler()  # ✅ Print logs in the terminal
+        logging.FileHandler("bot_debug.log"),
+        logging.StreamHandler()
     ]
 )
 
